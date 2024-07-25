@@ -1,0 +1,8 @@
+# ignore date folder
+data/
+
+# ignore vscode setting folder
+.vscode/
+
+# Ignore TensorBoard event files
+events.out.tfevents*
