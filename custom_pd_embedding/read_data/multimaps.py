@@ -80,6 +80,7 @@ class MyHttp:
                 self.data.append(prpd_data)
             elif map_type == 0x22:
                 # handle uhf prps map
+                continue
                 prpd_data = UHF_map.process_uhf_prps_map(self.filename, map_data)
                 self.data.append(prpd_data)
             else:
