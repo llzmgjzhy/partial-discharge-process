@@ -6,3 +6,8 @@ data/
 
 # Ignore TensorBoard event files
 events.out.tfevents*
+
+*.pyc
+
+# read data
+read_data/storage/
