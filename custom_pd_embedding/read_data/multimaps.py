@@ -12,7 +12,7 @@ import struct
 class MyHttp:
     def __init__(self):
         self.filename = None
-        self.data = []
+        self.data = None
 
     def check_single_info(self, data):
         with open("HEADFILE.json", "r") as file:
@@ -77,7 +77,8 @@ class MyHttp:
             elif map_type == 0x21:
                 # handle uhf prpd map
                 prpd_data = UHF_map.process_uhf_prpd_map(self.filename, map_data)
-                self.data.append(prpd_data)
+                label_data = [prpd_data, data_info["label"]]
+                self.data = label_data
             elif map_type == 0x22:
                 # handle uhf prps map
                 continue
