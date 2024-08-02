@@ -1,1 +1,1 @@
-from model_arch import RESNET18
+from .model_arch import RESNET18

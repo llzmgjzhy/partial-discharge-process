@@ -32,7 +32,8 @@ def construct_manmade_features(input_array: np.ndarray) -> np.ndarray:
     )
 
     return manmade_vector
-    
+
+
 def constuct_network_features(input_array: np.ndarray) -> np.ndarray:
     """
     Construct the network features from the input array.

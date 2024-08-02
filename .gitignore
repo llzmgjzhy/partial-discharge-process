@@ -8,6 +8,3 @@ data/
 events.out.tfevents*
 
 *.pyc
-
-# read data
-custom_pd_embedding/read_data/storage/
