@@ -10,4 +10,4 @@ events.out.tfevents*
 *.pyc
 
 # read data
-read_data/storage/
+custom_pd_embedding/read_data/storage/

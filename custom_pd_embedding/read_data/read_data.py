@@ -134,7 +134,7 @@ def main(choose_type: str = "all", map_type: str = "0x21"):
 
 
 if __name__ == "__main__":
-    # main()
-    with open("./storage/all_ai_data_train.json", "r") as f:
-        data = json.load(f)
-    print(data[0])
+    main()
+    # with open("./storage/all_ai_data_train.json", "r") as f:
+    #     data = json.load(f)
+    # print(data[0])
