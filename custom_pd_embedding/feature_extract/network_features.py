@@ -1,4 +1,4 @@
-from model import *
+from custom_pd_embedding.model import *
 import numpy as np
 
 
@@ -23,7 +23,6 @@ class NetworkExtractor:
             )
 
         # calculate the resnet18 feature of the input array
-        resnet18_feature = 0
         resnet18_feature = RESNET18(n_classes=feature_num)
 
         return resnet18_feature
