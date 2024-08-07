@@ -24,6 +24,7 @@ def read_data(path: str, trace_steps: int = 9):
         # get origin data
         content_array = np.array([item[0] for item in read_data])
         label_array = np.array([item[1] for item in read_data])
+        label_array = label_array.astype(np.int64)
 
         unique_labels = np.unique(label_array)
         response_content_array = []
@@ -118,4 +119,4 @@ def process_data(content_array: np.ndarray):
             # update the content_array using concat vector
             output_array[i][j] = concat_vector
 
-    return output_array
+    return output_array.astype(np.float32)

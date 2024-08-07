@@ -127,7 +127,10 @@ class ManmadeExtractor:
             # pulse count in specified phase window
             pulse_count = np.sum(input_array[i])
             # update the mean magnitude of specified phase window
-            mean_magnitude[i] = single_amplitude_sum / pulse_count
+            if pulse_count != 0:
+                mean_magnitude[i] = single_amplitude_sum / pulse_count
+            else:
+                mean_magnitude[i] = 0
 
         # calculate the gradient of the mean magnitude
         gradient = np.gradient(mean_magnitude)

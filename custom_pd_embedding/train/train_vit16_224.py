@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter("./runs")
@@ -84,9 +84,10 @@ def train(args, model, trainLoader, testLoader):
 
     for epoch in range(args.epochs):
         model.train()
+        loop = tqdm(enumerate(trainLoader), total=len(trainLoader))
         epoch_loss = 0
         epoch_accuracy = 0
-        for data, label in tqdm(trainLoader):
+        for step, (data, label) in loop:
             data = data.to(device)
             label = label.to(device)
 
@@ -97,14 +98,14 @@ def train(args, model, trainLoader, testLoader):
             loss.backward()
             optimizer.step()
 
-            # tensorboard
+            # tensorBoard
             writer.add_scalar("train-loss", loss, epoch)
 
             acc = (output.argmax(dim=1) == label).float().mean()
             epoch_accuracy += acc / len(trainLoader)
             epoch_loss += loss / len(trainLoader)
 
-        with torch.no_grad:
+        with torch.no_grad():
             model.eval()
             epoch_val_accuracy = 0
             epoch_val_loss = 0
@@ -113,7 +114,7 @@ def train(args, model, trainLoader, testLoader):
                 label = label.to(device)
 
                 val_output = model(data)
-                val_loss = criterion(output, label)
+                val_loss = criterion(val_output, label)
 
                 acc = (val_output.argmax(dim=1) == label).float().mean()
                 epoch_val_accuracy += acc / len(testLoader)
