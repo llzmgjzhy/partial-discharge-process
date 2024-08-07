@@ -128,11 +128,11 @@ class ViT(nn.Module):
         }, "pool type must be either cls (cls token) or mean (mean pooling)"
 
         self.to_patch_embedding = nn.Sequential(
-            Rearrange(
-                "b c (h p1) (w p2) -> b (h w) (p1 p2 c)",
-                p1=patch_height,
-                p2=patch_width,
-            ),
+            # Rearrange(
+            #     "b c (h p1) (w p2) -> b (h w) (p1 p2 c)",
+            #     p1=patch_height,
+            #     p2=patch_width,
+            # ),
             nn.LayerNorm(patch_dim),
             nn.Linear(patch_dim, dim),
             nn.LayerNorm(dim),
