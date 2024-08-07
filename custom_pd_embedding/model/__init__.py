@@ -1,1 +1,2 @@
-from .model_arch import RESNET18
+from .resnet import RESNET18
+from .vit import ViT

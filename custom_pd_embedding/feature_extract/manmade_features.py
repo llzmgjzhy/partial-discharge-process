@@ -13,7 +13,7 @@ class ManmadeExtractor:
     def __init__(self) -> None:
         pass
 
-    def pulse_phase_descriptor(input_array: np.ndarray) -> list:
+    def pulse_phase_descriptor(self, input_array: np.ndarray) -> list:
         """
         Extract the phase descriptor of pulses of dimensions specified in the input array.
 
@@ -21,7 +21,7 @@ class ManmadeExtractor:
         """
 
         # check the input is whether valid
-        if len(input_array.ndim) != 2:
+        if input_array.ndim != 2:
             raise ValueError(
                 "During pulse phase window feature extract,Input array must have 2 dimensions"
             )
@@ -33,15 +33,20 @@ class ManmadeExtractor:
 
             # calculate the pulse amplitude max
             non_zero_indices = np.nonzero(input_array[i])
-            pulse_amplitude_max = np.max(non_zero_indices)
+            if len(non_zero_indices) > 1:
+                pulse_amplitude_max = np.max(non_zero_indices)
 
-            # calculate the pulse amplitude sum
-            pulse_amplitude_sum = np.sum(
-                non_zero_indices * input_array[i][non_zero_indices]
-            )
+                # calculate the pulse amplitude sum
+                pulse_amplitude_sum = np.sum(
+                    non_zero_indices * input_array[i][non_zero_indices]
+                )
 
-            # calculate the pulse amplitude mean
-            pulse_amplitude_mean = pulse_amplitude_sum / pulse_count
+                # calculate the pulse amplitude mean
+                pulse_amplitude_mean = pulse_amplitude_sum / pulse_count
+            else:
+                pulse_amplitude_max = 0
+                pulse_amplitude_sum = 0
+                pulse_amplitude_mean = 0
 
             basic_descriptor.append(
                 {
@@ -54,12 +59,12 @@ class ManmadeExtractor:
 
         return basic_descriptor
 
-    def skewness_cycle(input_array: np.ndarray) -> int:
+    def skewness_cycle(self, input_array: np.ndarray) -> int:
         """
         Calculate the skewness of the input array.
         """
         # check the input is whether valid
-        if len(input_array.ndim) != 2:
+        if input_array.ndim != 2:
             raise ValueError(
                 "During skewness cycle feature extract,Input array must have 2 dimensions"
             )
@@ -76,12 +81,12 @@ class ManmadeExtractor:
 
         return skewness
 
-    def kurtosis_cycle(input_array: np.ndarray) -> int:
+    def kurtosis_cycle(self, input_array: np.ndarray) -> int:
         """
         Calculate the kurtosis of the input array.
         """
         # check the input is whether valid
-        if len(input_array.ndim) != 2:
+        if input_array.ndim != 2:
             raise ValueError(
                 "During kurtosis cycle feature extract,Input array must have 2 dimensions"
             )
@@ -98,12 +103,12 @@ class ManmadeExtractor:
 
         return kurtosis
 
-    def peak_num(input_array: np.ndarray) -> int:
+    def peak_num(self, input_array: np.ndarray) -> int:
         """
         Calculate the peak num of the input array.
         """
         # check the input is whether valid
-        if len(input_array.ndim) != 2:
+        if input_array.ndim != 2:
             raise ValueError(
                 "During peak num feature extract,Input array must have 2 dimensions"
             )
