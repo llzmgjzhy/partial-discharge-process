@@ -134,9 +134,9 @@ def train(args, model, trainLoader, testLoader):
 
 if __name__ == "__main__":
     # tensorBoard
-    # time_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    # writer_train = SummaryWriter(f"./runs/train/{time_now}")
-    # writer_test = SummaryWriter(f"./runs/test/{time_now}")
+    time_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    writer_train = SummaryWriter(f"./runs/train/{time_now}")
+    writer_test = SummaryWriter(f"./runs/test/{time_now}")
 
     # read and prepare for data
     args = getArgparse()
@@ -172,16 +172,15 @@ if __name__ == "__main__":
         image_size=48,
         patch_size=16,
         num_classes=6,
-        dim=512,
-        depth=6,
-        heads=16,
-        mlp_dim=512,
+        dim=128,
+        depth=12,
+        heads=8,
+        mlp_dim=128,
         dropout=0.1,
         emb_dropout=0.1,
     ).to(device)
-    print(vitModel)
 
     # train transformer
-    # train(args, vitModel, trainLoader, testLoader)
+    train(args, vitModel, trainLoader, testLoader)
 
     # save the model param
