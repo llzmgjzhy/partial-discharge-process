@@ -8,3 +8,5 @@ data/
 events.out.tfevents*
 
 *.pyc
+
+temp.py

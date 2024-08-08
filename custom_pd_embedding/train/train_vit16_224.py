@@ -7,10 +7,9 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from tqdm import tqdm
 import os
-from torch.utils.tensorboard import SummaryWriter
-
-writer = SummaryWriter("./runs")
+from datetime import datetime
 from pathlib import Path
+from torch.utils.tensorboard import SummaryWriter
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 import sys
@@ -88,7 +87,7 @@ def train(args, model, trainLoader, testLoader):
         loop = tqdm(enumerate(trainLoader), total=len(trainLoader))
         epoch_loss = 0
         epoch_accuracy = 0
-        for step, (data, label) in loop:
+        for _, (data, label) in loop:
             data = data.to(device)
             label = label.to(device)
 
@@ -99,12 +98,13 @@ def train(args, model, trainLoader, testLoader):
             loss.backward()
             optimizer.step()
 
-            # tensorBoard
-            writer.add_scalar("train-loss", loss, epoch)
-
             acc = (output.argmax(dim=1) == label).float().mean()
             epoch_accuracy += acc / len(trainLoader)
             epoch_loss += loss / len(trainLoader)
+
+        # tensorBoard
+        writer_train.add_scalar("loss", epoch_loss, epoch)
+        writer_train.add_scalar("acc", epoch_accuracy, epoch)
 
         with torch.no_grad():
             model.eval()
@@ -121,6 +121,10 @@ def train(args, model, trainLoader, testLoader):
                 epoch_val_accuracy += acc / len(testLoader)
                 epoch_val_loss += val_loss / len(testLoader)
 
+        # tensorBoard
+        writer_test.add_scalar("loss", epoch_val_loss, epoch)
+        writer_test.add_scalar("acc", epoch_val_accuracy, epoch)
+
         # scheduler.step()
 
         print(
@@ -129,6 +133,11 @@ def train(args, model, trainLoader, testLoader):
 
 
 if __name__ == "__main__":
+    # tensorBoard
+    # time_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    # writer_train = SummaryWriter(f"./runs/train/{time_now}")
+    # writer_test = SummaryWriter(f"./runs/test/{time_now}")
+
     # read and prepare for data
     args = getArgparse()
     print("[Training params]", args)
@@ -146,7 +155,7 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = train_test_split(
         processed_content_array,
         label_array,
-        train_size=0.8,
+        train_size=0.75,
         random_state=args.random_seed,
         stratify=label_array,
     )
@@ -170,8 +179,9 @@ if __name__ == "__main__":
         dropout=0.1,
         emb_dropout=0.1,
     ).to(device)
+    print(vitModel)
 
     # train transformer
-    train(args, vitModel, trainLoader, testLoader)
+    # train(args, vitModel, trainLoader, testLoader)
 
     # save the model param
