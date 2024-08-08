@@ -1,2 +1,2 @@
-from .resnet import RESNET18
-from .vit import ViT
+from .resnet.resnet import RESNET18
+from .vit.vit import ViT

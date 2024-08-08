@@ -15,3 +15,6 @@ temp.py
 # model state file
 *.bin
 *.pth
+
+# config file
+custom_pd_embedding/train/config

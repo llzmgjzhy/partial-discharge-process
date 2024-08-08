@@ -9,6 +9,7 @@ from tqdm import tqdm
 import os
 from datetime import datetime
 from pathlib import Path
+import json
 from torch.utils.tensorboard import SummaryWriter
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -21,6 +22,7 @@ from custom_pd_embedding.model import ViT
 from custom_pd_embedding.train.util import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+time_now = datetime.now().strftime("%m-%d-%y_%H-%M")
 
 
 def getArgparse():
@@ -43,7 +45,7 @@ def getArgparse():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=32,
+        default=8,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
@@ -53,10 +55,41 @@ def getArgparse():
         help="The learning rate of the model",
     )
     parser.add_argument(
+        "--dim",
+        type=int,
+        default=64,
+        help="vit model dim",
+    )
+    parser.add_argument(
+        "--depth",
+        type=int,
+        default=12,
+        help="vit model depth",
+    )
+    parser.add_argument(
+        "--heads",
+        type=int,
+        default=6,
+        help="vit model heads",
+    )
+    parser.add_argument(
+        "--mlp-dim",
+        type=int,
+        default=128,
+        help="vit model mlp-dim",
+    )
+    parser.add_argument(
         "--gamma",
         type=float,
         default=0.7,
         help="The learning rate decay rate",
+    )
+    parser.add_argument(
+        "--state-path",
+        type=str,
+        default=PROJECT_ROOT
+        / "custom_pd_embedding/model/vit/google_vit-base-patch16-224.bin",
+        help="The path to read the model state",
     )
     # dataset params
     parser.add_argument(
@@ -133,14 +166,29 @@ def train(args, model, trainLoader, testLoader):
 
 
 if __name__ == "__main__":
-    # tensorBoard
-    time_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    writer_train = SummaryWriter(f"./runs/train/{time_now}")
-    writer_test = SummaryWriter(f"./runs/test/{time_now}")
-
-    # read and prepare for data
+    # argparse and save config to json
     args = getArgparse()
-    print("[Training params]", args)
+    print("[Training params]")
+
+    # print the params
+    for arg in vars(args):
+        print(f"{arg}: {getattr(args, arg)}")
+    args_json = json.dumps({k: str(v) for k, v in args.__dict__.items()})
+
+    # save the config to json
+    with open(
+        PROJECT_ROOT / f"custom_pd_embedding/train/config/{time_now}.json", "w"
+    ) as f:
+        f.write(args_json)
+
+    # tensorBoard
+    writer_train = SummaryWriter(
+        f"./runs/train/lr-{args.lr}-bs-{args.batch_size}_{time_now}"
+    )
+    writer_test = SummaryWriter(
+        f"./runs/test/lr-{args.lr}-bs-{args.batch_size}_{time_now}"
+    )
+
     # get data
     if os.path.exists(PROJECT_ROOT / "data/storage/feature_processed_data.json"):
         processed_content_array, label_array = read_processed_data_from_json(
@@ -172,10 +220,10 @@ if __name__ == "__main__":
         image_size=48,
         patch_size=16,
         num_classes=6,
-        dim=128,
-        depth=12,
-        heads=8,
-        mlp_dim=128,
+        dim=args.dim,
+        depth=args.depth,
+        heads=args.heads,
+        mlp_dim=args.mlp_dim,
         dropout=0.1,
         emb_dropout=0.1,
     ).to(device)
