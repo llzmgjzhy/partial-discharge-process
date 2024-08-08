@@ -120,3 +120,40 @@ def process_data(content_array: np.ndarray):
             output_array[i][j] = concat_vector
 
     return output_array.astype(np.float32)
+
+
+def save_processed_data_to_json(
+    content_array: np.ndarray, label_array: np.ndarray, path: str
+):
+    """
+    Save the processed data to the given path.
+
+    Arguments:
+    content_array: The content array to be saved.
+    label_array: The label array to be saved.
+    path: The path to save the processed data.
+    """
+    concent_list = content_array.tolist()
+    label_list = label_array.tolist()
+
+    save_json = {"content": concent_list, "label": label_list}
+
+    with open(path, "w") as f:
+        json.dump(save_json, f)
+
+
+def read_processed_data_from_json(path: str):
+    """
+    Read the processed data from the given path.
+
+    """
+    try:
+        with open(path, "r") as f:
+            read_data = json.load(f)
+    except Exception as e:
+        print("catch processed data json file error", e)
+
+    processed_array = np.array(read_data["content"], dtype=np.float32)
+    label_array = np.array(read_data["label"], dtype=np.int64)
+
+    return processed_array, label_array

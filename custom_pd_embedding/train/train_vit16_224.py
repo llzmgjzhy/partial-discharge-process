@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from tqdm import tqdm
+import os
 from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter("./runs")
@@ -37,19 +38,19 @@ def getArgparse():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=10,
+        default=100,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=8,
+        default=32,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
         "--lr",
         type=float,
-        default=3e-5,
+        default=2e-4,
         help="The learning rate of the model",
     )
     parser.add_argument(
@@ -120,7 +121,7 @@ def train(args, model, trainLoader, testLoader):
                 epoch_val_accuracy += acc / len(testLoader)
                 epoch_val_loss += val_loss / len(testLoader)
 
-        scheduler.step()
+        # scheduler.step()
 
         print(
             f"Epoch : {epoch+1} - loss : {epoch_loss:.4f} - acc: {epoch_accuracy:.4f} - val_loss : {epoch_val_loss:.4f} - val_acc: {epoch_val_accuracy:.4f}\n"
@@ -130,11 +131,16 @@ def train(args, model, trainLoader, testLoader):
 if __name__ == "__main__":
     # read and prepare for data
     args = getArgparse()
-
+    print("[Training params]", args)
     # get data
-    content_array, label_array = read_data(args.path, trace_steps=args.trace_steps)
-    # process content_array
-    processed_content_array = process_data(content_array)
+    if os.path.exists(PROJECT_ROOT / "data/storage/feature_processed_data.json"):
+        processed_content_array, label_array = read_processed_data_from_json(
+            PROJECT_ROOT / "data/storage/feature_processed_data.json"
+        )
+    else:
+        content_array, label_array = read_data(args.path, trace_steps=args.trace_steps)
+        # process content_array
+        processed_content_array = process_data(content_array)
 
     # making dataset
     X_train, X_test, y_train, y_test = train_test_split(
@@ -157,10 +163,10 @@ if __name__ == "__main__":
         image_size=48,
         patch_size=16,
         num_classes=6,
-        dim=128,
+        dim=512,
         depth=6,
         heads=16,
-        mlp_dim=1024,
+        mlp_dim=512,
         dropout=0.1,
         emb_dropout=0.1,
     ).to(device)
