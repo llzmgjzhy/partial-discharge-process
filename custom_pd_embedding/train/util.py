@@ -4,6 +4,7 @@ from custom_pd_embedding.util import *
 import torch
 
 TRANSFORMER_INPUT_DIM = 768
+ARGS_JSON_PATH = "custom_pd_embedding/train/runs"
 
 
 def read_data(path: str, trace_steps: int = 9):
@@ -157,3 +158,22 @@ def read_processed_data_from_json(path: str):
     label_array = np.array(read_data["label"], dtype=np.int64)
 
     return processed_array, label_array
+
+
+def console_save_args_to_json(args, root_path, time_now):
+    """
+    Save the args to the json file.
+
+    Arguments:
+    args: The args to be saved.
+    root_path: The project root path.
+    time_now: The time now.
+    """
+    print("[Training params]")
+    for arg in vars(args):
+        print(f"{arg}: {getattr(args, arg)}")
+    args_json = json.dumps({k: str(v) for k, v in args.__dict__.items()})
+
+    # save the config to json
+    with open(root_path / ARGS_JSON_PATH / time_now / f"{time_now}.json", "w") as f:
+        f.write(args_json)

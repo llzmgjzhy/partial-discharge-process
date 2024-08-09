@@ -9,7 +9,6 @@ from tqdm import tqdm
 import os
 from datetime import datetime
 from pathlib import Path
-import json
 from torch.utils.tensorboard import SummaryWriter
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -22,7 +21,11 @@ from custom_pd_embedding.model import ViT
 from custom_pd_embedding.train.util import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-time_now = datetime.now().strftime("%m-%d-%y_%H-%M")
+time_now = datetime.now().strftime("%m-%d-%y_%H-%M-%S")
+
+# tensorBoard
+writer_train = SummaryWriter(f"./runs/{time_now}/train")
+writer_test = SummaryWriter(f"./runs/{time_now}/test")
 
 
 def getArgparse():
@@ -168,26 +171,7 @@ def train(args, model, trainLoader, testLoader):
 if __name__ == "__main__":
     # argparse and save config to json
     args = getArgparse()
-    print("[Training params]")
-
-    # print the params
-    for arg in vars(args):
-        print(f"{arg}: {getattr(args, arg)}")
-    args_json = json.dumps({k: str(v) for k, v in args.__dict__.items()})
-
-    # save the config to json
-    with open(
-        PROJECT_ROOT / f"custom_pd_embedding/train/config/{time_now}.json", "w"
-    ) as f:
-        f.write(args_json)
-
-    # tensorBoard
-    writer_train = SummaryWriter(
-        f"./runs/train/lr-{args.lr}-bs-{args.batch_size}_{time_now}"
-    )
-    writer_test = SummaryWriter(
-        f"./runs/test/lr-{args.lr}-bs-{args.batch_size}_{time_now}"
-    )
+    console_save_args_to_json(args, PROJECT_ROOT, time_now)
 
     # get data
     if os.path.exists(PROJECT_ROOT / "data/storage/feature_processed_data.json"):
