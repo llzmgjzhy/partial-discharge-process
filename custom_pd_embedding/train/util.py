@@ -2,15 +2,17 @@ import json
 import numpy as np
 from custom_pd_embedding.util import *
 import torch
+import torchvision.transforms as transforms
 
 TRANSFORMER_INPUT_DIM = 768
-ARGS_JSON_PATH = "custom_pd_embedding/train/runs"
+ARGS_JSON_PATH = "custom_pd_embedding/train"
 
 
 def read_data(path: str, trace_steps: int = 9):
     """
     Read the data from the given path and return the content and label array.
-    Arguments:
+
+    arguments:
     path: The path to the data file.
 
     trace_steps: Specify the number of backtracking images.If 9,indicating that 9 images of the same category will be input as the one image into the Vit model,with an input dimension of (b,9,768).768 is the original input dimension of the transformer model.
@@ -51,7 +53,7 @@ def prepare_input_for_resnet(input_array: np.ndarray):
     """
     prepare for input array:regulation the input array and add the channel dim to match the input of resnet model.
 
-    Arguments:
+    arguments:
     input_array: The input array to be prepared.
     """
     if input_array.ndim != 2:
@@ -77,11 +79,55 @@ def prepare_input_for_resnet(input_array: np.ndarray):
     return input_tensor
 
 
+def process_data_for_resnet(content_array: np.ndarray):
+    """
+    process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the resnet model.
+
+    arguments:
+    content_array: The content array to be processed.
+
+    procedure:
+    regulation the input array,add the channel dim to match the input of resnet model and turn the type into float32.
+    """
+    count, trace_steps = content_array.shape[:2]
+    output_array = np.zeros_like(content_array)
+
+    for i in range(count):
+        for j in range(trace_steps):
+            network_input_array = prepare_input_for_resnet(content_array[i][j])
+            output_array[i][j] = network_input_array
+
+    return output_array.astype(np.float32)
+
+
+def process_data_for_vit(content_array: np.ndarray):
+    """
+    process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the vit model.
+
+    arguments:
+    content_array: The content array to be processed.
+
+    procedure:
+
+    """
+    tensor_array = torch.from_numpy(content_array)
+    output_tensor = torch.zeros_like(tensor_array)
+
+    # define resize transform
+    resize_transform = transforms.Resize((224, 224))
+
+    output_tensor = resize_transform(tensor_array)
+    if output_tensor.size(1) == 1:
+        output_tensor = output_tensor.repeat(1, 3, 1, 1)
+
+    return output_tensor.to(dtype=torch.float32)
+
+
 def process_data(content_array: np.ndarray):
     """
     process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the transformer model.
 
-    Arguments:
+    arguments:
     content_array: The content array to be processed.
 
     procedure:
@@ -129,7 +175,7 @@ def save_processed_data_to_json(
     """
     Save the processed data to the given path.
 
-    Arguments:
+    arguments:
     content_array: The content array to be saved.
     label_array: The label array to be saved.
     path: The path to save the processed data.
@@ -160,11 +206,11 @@ def read_processed_data_from_json(path: str):
     return processed_array, label_array
 
 
-def console_save_args_to_json(args, root_path, time_now):
+def console_save_args_to_json(args, root_path, time_now, tb_path: str = "runs"):
     """
     Save the args to the json file.
 
-    Arguments:
+    arguments:
     args: The args to be saved.
     root_path: The project root path.
     time_now: The time now.
@@ -175,5 +221,7 @@ def console_save_args_to_json(args, root_path, time_now):
     args_json = json.dumps({k: str(v) for k, v in args.__dict__.items()})
 
     # save the config to json
-    with open(root_path / ARGS_JSON_PATH / time_now / f"{time_now}.json", "w") as f:
+    with open(
+        root_path / ARGS_JSON_PATH / tb_path / time_now / f"{time_now}.json", "w"
+    ) as f:
         f.write(args_json)

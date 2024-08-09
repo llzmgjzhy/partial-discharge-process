@@ -17,15 +17,16 @@ import sys
 # make sure the path of import adequate
 sys.path.insert(0, str(PROJECT_ROOT))
 from custom_pd_embedding.read_data.ai_data_train.dataset import AItrainDataset
-from custom_pd_embedding.model import RESNET18
+import timm
 from custom_pd_embedding.train.util import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 time_now = datetime.now().strftime("%m-%d-%y_%H-%M-%S")
 
 # tensorBoard
-writer_train = SummaryWriter(f"./runs_resnet18/{time_now}/train")
-writer_test = SummaryWriter(f"./runs_resnet18/{time_now}/test")
+tensorBoard_path = "runs_vit16"
+writer_train = SummaryWriter(f"./{tensorBoard_path}/{time_now}/train")
+writer_test = SummaryWriter(f"./{tensorBoard_path}/{time_now}/test")
 
 
 def getArgparse():
@@ -91,7 +92,7 @@ def getArgparse():
     parser.add_argument(
         "--trace-steps",
         type=int,
-        default=1,
+        default=3,
         help="The num of backtracking images",
     )
     parser.add_argument(
@@ -164,10 +165,11 @@ def train(args, model, trainLoader, testLoader):
 if __name__ == "__main__":
     # argparse and save config to json
     args = getArgparse()
+    console_save_args_to_json(args, PROJECT_ROOT, time_now, tb_path=tensorBoard_path)
 
     # get data
     content_array, label_array = read_data(args.path, trace_steps=args.trace_steps)
-    processed_content_array = process_data_for_resnet(content_array)
+    processed_content_array = process_data_for_vit(content_array)
 
     # making dataset
     X_train, X_test, y_train, y_test = train_test_split(
@@ -184,6 +186,13 @@ if __name__ == "__main__":
     testLoader = DataLoader(testDataset, batch_size=args.batch_size, shuffle=False)
 
     # model
-    model = RESNET18(n_classes=len(np.unique(label_array))).to(device)
+    # 📌:the model config decide the input dims,which is related to the data processing,so if change model config,data processing must change-->mainly is the TRANSFORMER_INPUT_DIM
+    # image_size set 48,meaning the input can be divided into 9 patches,match the data processing:turn 9 prpd images into 1 prpd time sequence data
+    vitModel = timm.create_model(
+        "vit_base_patch16_224", pretrained=True, num_classes=6
+    ).to(device)
 
-    train(args, model, trainLoader, testLoader)
+    # train transformer
+    train(args, vitModel, trainLoader, testLoader)
+
+    # save the model param

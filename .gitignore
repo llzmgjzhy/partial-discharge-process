@@ -17,4 +17,4 @@ temp.py
 *.pth
 
 # config file
-custom_pd_embedding/train/runs
+custom_pd_embedding/train/**/*.json

@@ -17,15 +17,17 @@ import sys
 # make sure the path of import adequate
 sys.path.insert(0, str(PROJECT_ROOT))
 from custom_pd_embedding.read_data.ai_data_train.dataset import AItrainDataset
-from custom_pd_embedding.model import ViT
+import timm
+from custom_pd_embedding.model import ModifiedViT
 from custom_pd_embedding.train.util import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 time_now = datetime.now().strftime("%m-%d-%y_%H-%M-%S")
 
 # tensorBoard
-writer_train = SummaryWriter(f"./runs/{time_now}/train")
-writer_test = SummaryWriter(f"./runs/{time_now}/test")
+tensorBoard_path = "runs"
+writer_train = SummaryWriter(f"./{tensorBoard_path}/{time_now}/train")
+writer_test = SummaryWriter(f"./{tensorBoard_path}/{time_now}/test")
 
 
 def getArgparse():
@@ -86,13 +88,6 @@ def getArgparse():
         type=float,
         default=0.7,
         help="The learning rate decay rate",
-    )
-    parser.add_argument(
-        "--state-path",
-        type=str,
-        default=PROJECT_ROOT
-        / "custom_pd_embedding/model/vit/google_vit-base-patch16-224.bin",
-        help="The path to read the model state",
     )
     # dataset params
     parser.add_argument(
@@ -171,7 +166,7 @@ def train(args, model, trainLoader, testLoader):
 if __name__ == "__main__":
     # argparse and save config to json
     args = getArgparse()
-    console_save_args_to_json(args, PROJECT_ROOT, time_now)
+    console_save_args_to_json(args, PROJECT_ROOT, time_now, tb_path=tensorBoard_path)
 
     # get data
     if os.path.exists(PROJECT_ROOT / "data/storage/feature_processed_data.json"):
@@ -200,17 +195,22 @@ if __name__ == "__main__":
     # model
     # 📌:the model config decide the input dims,which is related to the data processing,so if change model config,data processing must change-->mainly is the TRANSFORMER_INPUT_DIM
     # image_size set 48,meaning the input can be divided into 9 patches,match the data processing:turn 9 prpd images into 1 prpd time sequence data
-    vitModel = ViT(
-        image_size=48,
-        patch_size=16,
-        num_classes=6,
-        dim=args.dim,
-        depth=args.depth,
-        heads=args.heads,
-        mlp_dim=args.mlp_dim,
-        dropout=0.1,
-        emb_dropout=0.1,
-    ).to(device)
+    vit = timm.create_model("vit_base_patch16_224", pretrained=True, num_classes=6).to(
+        device
+    )
+    vit.patch_embed = nn.Identity()
+    vitModel = vit
+    # vitModel = ViT(
+    #     image_size=48,
+    #     patch_size=16,
+    #     num_classes=6,
+    #     dim=args.dim,
+    #     depth=args.depth,
+    #     heads=args.heads,
+    #     mlp_dim=args.mlp_dim,
+    #     dropout=0.1,
+    #     emb_dropout=0.1,
+    # ).to(device)
 
     # train transformer
     train(args, vitModel, trainLoader, testLoader)
