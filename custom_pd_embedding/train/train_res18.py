@@ -24,8 +24,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 time_now = datetime.now().strftime("%m-%d-%y_%H-%M-%S")
 
 # tensorBoard
-writer_train = SummaryWriter(f"./runs_resnet18/{time_now}/train")
-writer_test = SummaryWriter(f"./runs_resnet18/{time_now}/test")
+tensorBoard_path = "runs_resnet18"
+writer_train = SummaryWriter(f"./{tensorBoard_path}/{time_now}/train")
+writer_test = SummaryWriter(f"./{tensorBoard_path}/{time_now}/test")
 
 
 def getArgparse():
@@ -42,7 +43,7 @@ def getArgparse():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=100,
+        default=10,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
@@ -160,10 +161,16 @@ def train(args, model, trainLoader, testLoader):
             f"Epoch : {epoch+1} - loss : {epoch_loss:.4f} - acc: {epoch_accuracy:.4f} - val_loss : {epoch_val_loss:.4f} - val_acc: {epoch_val_accuracy:.4f}\n"
         )
 
+    # save model dict
+    model_save_path = PROJECT_ROOT / "custom_pd_embedding/model/resnet/resnet18"
+    torch.save(model.state_dict(), model_save_path / f"resnet18_{time_now}.pth")
+
+
 
 if __name__ == "__main__":
     # argparse and save config to json
     args = getArgparse()
+    console_save_args_to_json(args, PROJECT_ROOT, time_now, tb_path=tensorBoard_path)
 
     # get data
     content_array, label_array = read_data(args.path, trace_steps=args.trace_steps)

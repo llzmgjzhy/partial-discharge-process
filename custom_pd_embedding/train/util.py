@@ -5,6 +5,7 @@ import torch
 import torchvision.transforms as transforms
 
 TRANSFORMER_INPUT_DIM = 768
+MLP_INPUT_DIM = 403
 ARGS_JSON_PATH = "custom_pd_embedding/train"
 
 
@@ -123,6 +124,35 @@ def process_data_for_vit(content_array: np.ndarray):
     return output_tensor.to(dtype=torch.float32)
 
 
+def process_data_for_mlp(content_array: np.ndarray):
+    """
+    process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the transformer model.
+
+    arguments:
+    content_array: The content array to be processed.
+
+    procedure:
+    extract manmade features and reshape the content array to (count,feature_dim)
+    """
+
+    # get the dims of content_array
+    # count is content num,trace_steps is the num of backtracking images
+    count, trace_steps = content_array.shape[:2]
+
+    # create new numpy array,confirm the first two dim equal
+    output_array = np.zeros((count, MLP_INPUT_DIM))
+
+    for i in range(count):
+        for j in range(trace_steps):
+            # extract manmade features
+            manmade_vector = construct_manmade_features(content_array[i][j])
+
+            # update the content_array using manmade vector
+            output_array[i] = manmade_vector
+
+    return output_array.astype(np.float32)
+
+
 def process_data(content_array: np.ndarray):
     """
     process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the transformer model.
@@ -219,6 +249,7 @@ def console_save_args_to_json(args, root_path, time_now, tb_path: str = "runs"):
     for arg in vars(args):
         print(f"{arg}: {getattr(args, arg)}")
     args_json = json.dumps({k: str(v) for k, v in args.__dict__.items()})
+    print("-" * 60)
 
     # save the config to json
     with open(
