@@ -43,7 +43,7 @@ def getArgparse():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=10,
+        default=150,
         help="The number of epochs to train the model",
     )
     parser.add_argument(

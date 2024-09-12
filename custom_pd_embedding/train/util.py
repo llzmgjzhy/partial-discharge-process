@@ -150,6 +150,12 @@ def process_data_for_mlp(content_array: np.ndarray):
             # update the content_array using manmade vector
             output_array[i] = manmade_vector
 
+    # regulation the output array
+    min_vals = output_array.min(axis=0)
+    max_vals = output_array.max(axis=0)
+    epsilon = 1e-8
+    output_array = (output_array - min_vals) / (max_vals - min_vals + epsilon)
+
     return output_array.astype(np.float32)
 
 
