@@ -6,6 +6,7 @@ import torchvision.transforms as transforms
 
 TRANSFORMER_INPUT_DIM = 768
 MLP_INPUT_DIM = 403
+N_CLASSES = 6
 ARGS_JSON_PATH = "custom_pd_embedding/train"
 
 
@@ -195,7 +196,9 @@ def process_data(content_array: np.ndarray):
                 np.array(content_array[i][j])
             )
             network_vector = construct_network_features(
-                network_input_array, network_dims=network_feature_nums
+                network_input_array,
+                n_classes=N_CLASSES,
+                network_dims=network_feature_nums,
             )
 
             if network_vector.is_cuda:

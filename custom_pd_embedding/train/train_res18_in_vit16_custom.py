@@ -17,15 +17,14 @@ import sys
 # make sure the path of import adequate
 sys.path.insert(0, str(PROJECT_ROOT))
 from custom_pd_embedding.read_data.ai_data_train.dataset import AItrainDataset
-import timm
-from custom_pd_embedding.model import ViT
+from custom_pd_embedding.model import RESNET18InVit16Custom
 from custom_pd_embedding.train.util import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 time_now = datetime.now().strftime("%m-%d-%y_%H-%M-%S")
 
 # tensorBoard
-tensorBoard_path = "runs_vit_custom"
+tensorBoard_path = "runs_resnet18InVit16Custom"
 writer_train = SummaryWriter(f"./{tensorBoard_path}/{time_now}/train")
 writer_test = SummaryWriter(f"./{tensorBoard_path}/{time_now}/test")
 
@@ -44,7 +43,7 @@ def getArgparse():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=800,
+        default=30,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
@@ -56,7 +55,7 @@ def getArgparse():
     parser.add_argument(
         "--lr",
         type=float,
-        default=3e-5,
+        default=2e-4,
         help="The learning rate of the model",
     )
     parser.add_argument(
@@ -93,7 +92,7 @@ def getArgparse():
     parser.add_argument(
         "--trace-steps",
         type=int,
-        default=4,
+        default=1,
         help="The num of backtracking images",
     )
     parser.add_argument(
@@ -162,6 +161,12 @@ def train(args, model, trainLoader, testLoader):
             f"Epoch : {epoch+1} - loss : {epoch_loss:.4f} - acc: {epoch_accuracy:.4f} - val_loss : {epoch_val_loss:.4f} - val_acc: {epoch_val_accuracy:.4f}\n"
         )
 
+    # save model dict
+    model_save_path = PROJECT_ROOT / "custom_pd_embedding/model/resnet/resnet18"
+    torch.save(
+        model.state_dict(), model_save_path / f"resnet18InVitCustom_{time_now}.pth"
+    )
+
 
 if __name__ == "__main__":
     # argparse and save config to json
@@ -169,24 +174,8 @@ if __name__ == "__main__":
     console_save_args_to_json(args, PROJECT_ROOT, time_now, tb_path=tensorBoard_path)
 
     # get data
-    if os.path.exists(
-        PROJECT_ROOT
-        / f"data/storage/feature_processed_data_{args.trace_steps}steps.json"
-    ):
-        processed_content_array, label_array = read_processed_data_from_json(
-            PROJECT_ROOT
-            / f"data/storage/feature_processed_data_{args.trace_steps}steps.json"
-        )
-    else:
-        content_array, label_array = read_data(args.path, trace_steps=args.trace_steps)
-        # process content_array
-        processed_content_array = process_data(content_array)
-        save_processed_data_to_json(
-            processed_content_array,
-            label_array,
-            PROJECT_ROOT
-            / f"data/storage/feature_processed_data_{args.trace_steps}steps.json",
-        )
+    content_array, label_array = read_data(args.path, trace_steps=args.trace_steps)
+    processed_content_array = process_data_for_resnet(content_array)
 
     # making dataset
     X_train, X_test, y_train, y_test = train_test_split(
@@ -203,21 +192,9 @@ if __name__ == "__main__":
     testLoader = DataLoader(testDataset, batch_size=args.batch_size, shuffle=False)
 
     # model
-    # 📌:the model config decide the input dims,which is related to the data processing,so if change model config,data processing must change-->mainly is the TRANSFORMER_INPUT_DIM
-    # image_size set 48,meaning the input can be divided into 9 patches,match the data processing:turn 9 prpd images into 1 prpd time sequence data
-    vitModel = ViT(
-        image_size=32,
-        patch_size=16,
-        num_classes=6,
-        dim=args.dim,
-        depth=args.depth,
-        heads=args.heads,
-        mlp_dim=args.mlp_dim,
-        dropout=0.1,
-        emb_dropout=0.1,
+    model = RESNET18InVit16Custom(
+        n_classes=len(np.unique(label_array)),
+        hidden_dim=TRANSFORMER_INPUT_DIM - MLP_INPUT_DIM,
     ).to(device)
 
-    # train transformer
-    train(args, vitModel, trainLoader, testLoader)
-
-    # save the model param
+    train(args, model, trainLoader, testLoader)

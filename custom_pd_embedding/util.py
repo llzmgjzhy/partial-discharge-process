@@ -1,4 +1,7 @@
-from custom_pd_embedding.feature_extract import ManmadeExtractor, NetworkExtractor
+from custom_pd_embedding.feature_extract import (
+    ManmadeExtractor,
+    NetworkExtractorResnetFineTune,
+)
 import numpy as np
 from torch import Tensor
 
@@ -34,12 +37,14 @@ def construct_manmade_features(input_array: np.ndarray) -> np.ndarray:
     return manmade_vector
 
 
-def  construct_network_features(
-    input_array: Tensor, network_dims: int = 768
+def construct_network_features(
+    input_array: Tensor, n_classes: int = 6, network_dims: int = 768
 ) -> np.ndarray:
     """
     Construct the network features from the input array.
     """
-    networkExtractor = NetworkExtractor()
-    network_vector = networkExtractor.resnet18_feature(input_array, network_dims)
+    networkExtractor = NetworkExtractorResnetFineTune()
+    network_vector = networkExtractor.resnet18_feature(
+        input_array, n_classes, network_dims
+    )
     return network_vector
