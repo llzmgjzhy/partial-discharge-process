@@ -181,6 +181,11 @@ def process_data(content_array: np.ndarray):
         for j in range(trace_steps):
             # extract manmade features
             manmade_vector = construct_manmade_features(content_array[i][j])
+            # normalize manmade_vector
+            min_val = np.min(manmade_vector)
+            max_val = np.max(manmade_vector)
+            epsilon = 1e-8
+            manmade_vector = (manmade_vector - min_val) / (max_val - min_val + epsilon)
 
             # extract the network features
             # confirm network dims

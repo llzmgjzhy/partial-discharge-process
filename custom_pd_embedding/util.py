@@ -34,7 +34,7 @@ def construct_manmade_features(input_array: np.ndarray) -> np.ndarray:
     return manmade_vector
 
 
-def construct_network_features(
+def  construct_network_features(
     input_array: Tensor, network_dims: int = 768
 ) -> np.ndarray:
     """

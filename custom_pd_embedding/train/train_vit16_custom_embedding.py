@@ -25,7 +25,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 time_now = datetime.now().strftime("%m-%d-%y_%H-%M-%S")
 
 # tensorBoard
-tensorBoard_path = "runs"
+tensorBoard_path = "runs_vit_custom"
 writer_train = SummaryWriter(f"./{tensorBoard_path}/{time_now}/train")
 writer_test = SummaryWriter(f"./{tensorBoard_path}/{time_now}/test")
 
@@ -44,7 +44,7 @@ def getArgparse():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=100,
+        default=500,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
@@ -56,7 +56,7 @@ def getArgparse():
     parser.add_argument(
         "--lr",
         type=float,
-        default=2e-4,
+        default=3e-5,
         help="The learning rate of the model",
     )
     parser.add_argument(
@@ -174,7 +174,8 @@ if __name__ == "__main__":
         / f"data/storage/feature_processed_data_{args.trace_steps}steps.json"
     ):
         processed_content_array, label_array = read_processed_data_from_json(
-            PROJECT_ROOT / f"data/storage/feature_processed_data_{args.trace_steps}steps.json"
+            PROJECT_ROOT
+            / f"data/storage/feature_processed_data_{args.trace_steps}steps.json"
         )
     else:
         content_array, label_array = read_data(args.path, trace_steps=args.trace_steps)
@@ -204,13 +205,8 @@ if __name__ == "__main__":
     # model
     # 📌:the model config decide the input dims,which is related to the data processing,so if change model config,data processing must change-->mainly is the TRANSFORMER_INPUT_DIM
     # image_size set 48,meaning the input can be divided into 9 patches,match the data processing:turn 9 prpd images into 1 prpd time sequence data
-    # vit = timm.create_model("vit_base_patch16_224", pretrained=True, num_classes=6).to(
-    #     device
-    # )
-    # vit.patch_embed = nn.Identity()
-    # vitModel = vit
     vitModel = ViT(
-        image_size=16,
+        image_size=48,
         patch_size=16,
         num_classes=6,
         dim=args.dim,
