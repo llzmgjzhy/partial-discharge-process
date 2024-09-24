@@ -60,13 +60,13 @@ class weightVit(nn.Module):
 
         self.mlp_head = nn.Linear(dim, num_classes)
 
-        # classifier
+        # three classifier
 
         # manmade feature classifier
         self.mlp = MLP(
-            in_features=num_classes,
+            in_features=patch_dim,
             hidden_dim=512,
-            out_features=6,
+            out_features=num_classes,
             dropout=0.1,
         )
 
@@ -88,3 +88,13 @@ class weightVit(nn.Module):
             dropout=0.1,
             emb_dropout=0.1,
         )
+
+    def forward(self,x):
+        # classifiers inference
+        with torch.no_grad():
+            mlp_pre = self.mlp(x)
+            resnet_pre = self.resnet18(x)
+            vit_pre = self.vit_classifier(x)
+
+        # backbone inference
+        

@@ -106,7 +106,7 @@ class ViT(nn.Module):
         depth,
         heads,
         mlp_dim,
-        pool="cls",
+        pool="cls", 
         channels=3,
         dim_head=64,
         dropout=0.0,
