@@ -79,7 +79,7 @@ class weightVit(nn.Module):
         # x shape is (batch_size,trace_steps,h=100,w=100)
 
         # cause data process code has existed,but is numpy type.for code reuse,firstly turn x into numpy,and then turn into tensor when process is finished
-        x_np = x.numpy()
+        x_np = x.cpu().numpy()
         x_mlp = process_data_for_mlp(x_np)
         x_resnet = process_data_for_resnet(x_np)
         x_vit = process_data(x_np)
@@ -95,7 +95,8 @@ class weightVit(nn.Module):
             resnet_pre = self.resnet18(x_resnet)
             vit_pre = self.vit_classifier(x_vit)
 
-        weightVit_input = torch.cat([mlp_pre, resnet_pre, vit_pre], dim=0)
+        weightVit_input = torch.cat([mlp_pre, resnet_pre, vit_pre], dim=1)
+        weightVit_input = weightVit_input.unsqueeze(1)
 
         # backbone inference
         weightVit_input = self.to_patch_embedding(weightVit_input)
@@ -113,5 +114,14 @@ class weightVit(nn.Module):
             else weightVit_input[:, 0]
         )
 
+        # get weights and allocate to the classifiers
         weightVit_input = self.to_latent(weightVit_input)
-        return self.mlp_head(weightVit_input)
+        weights = torch.softmax(self.mlp_head(weightVit_input), dim=-1)
+        w1, w2, w3 = weights[:, 0], weights[:, 1], weights[:, 2]
+        final_pre = (
+            w1.unsqueeze(1) * mlp_pre
+            + w2.unsqueeze(1) * resnet_pre
+            + w3.unsqueeze(1) * vit_pre
+        )
+
+        return final_pre
