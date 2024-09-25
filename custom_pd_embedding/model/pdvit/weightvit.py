@@ -2,10 +2,8 @@
 # conclude a vit model to learn a set of weights assigned to the classifier and the classifiers
 import torch
 from torch import nn
-from einops import rearrange, repeat
+from einops import repeat
 from custom_pd_embedding.model.vit.vit_base.vit import (
-    FeedForward,
-    Attention,
     Transformer,
     ViT,
 )
@@ -15,26 +13,18 @@ from custom_pd_embedding.train.util import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# helpers
-
-
-def pair(t):
-    return t if isinstance(t, tuple) else (t, t)
-
 
 class weightVit(nn.Module):
     def __init__(
         self,
         *,
-        image_size,
-        patch_size,
+        num_classifiers,
         num_classes,
         dim,
         depth,
         heads,
         mlp_dim,
         pool="cls",
-        channels=3,
         dim_head=64,
         dropout=0.0,
         emb_dropout=0.0,
@@ -43,20 +33,15 @@ class weightVit(nn.Module):
         vit_path,
     ):
         super().__init__()
-
         # vit pipeline config
-        image_height, image_width = pair(image_size)
-        patch_height, patch_width = pair(patch_size)
-
-        num_patches = (image_height // patch_height) * (image_width // patch_width)
-        patch_dim = channels * patch_height * patch_width
+        patch_dim = num_classifiers * num_classes
 
         self.to_patch_embedding = nn.Sequential(
             nn.LayerNorm(patch_dim),
             nn.Linear(patch_dim, dim),
             nn.LayerNorm(dim),
         )
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
+
         self.weight_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
         self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
@@ -80,10 +65,10 @@ class weightVit(nn.Module):
             image_size=16,
             patch_size=16,
             num_classes=num_classes,
-            dim=512,
-            depth=6,
-            heads=8,
-            mlp_dim=512,
+            dim=64,
+            depth=4,
+            heads=4,
+            mlp_dim=64,
             dropout=0.1,
             emb_dropout=0.1,
         )
@@ -110,9 +95,10 @@ class weightVit(nn.Module):
             resnet_pre = self.resnet18(x_resnet)
             vit_pre = self.vit_classifier(x_vit)
 
-        weightVit_input = torch.cat([mlp_pre, resnet_pre, vit_pre], dim=1)
+        weightVit_input = torch.cat([mlp_pre, resnet_pre, vit_pre], dim=0)
 
         # backbone inference
+        weightVit_input = self.to_patch_embedding(weightVit_input)
         b, n, _ = weightVit_input.shape
 
         weight_tokens = repeat(self.weight_token, "1 1 d -> b 1 d", b=b)
@@ -121,7 +107,11 @@ class weightVit(nn.Module):
 
         weightVit_input = self.transformer(weightVit_input)
 
-        weightVit_input = weightVit_input.mean(dim=1) if self.pool == "mean" else weightVit_input[:, 0]
+        weightVit_input = (
+            weightVit_input.mean(dim=1)
+            if self.pool == "mean"
+            else weightVit_input[:, 0]
+        )
 
         weightVit_input = self.to_latent(weightVit_input)
         return self.mlp_head(weightVit_input)
