@@ -46,7 +46,9 @@ def read_data(path: str, trace_steps: int = 9):
                     response_content_array.append(content_array[indices[-trace_steps:]])
                 response_label_array.append(label)
 
-        return np.array(response_content_array), np.array(response_label_array)
+        return np.array(response_content_array, dtype=np.float32), np.array(
+            response_label_array, dtype=np.float32
+        )
     except Exception as e:
         print("catch data file error", e)
 
@@ -227,12 +229,12 @@ def process_data_for_mlp_tensor(content_tensor: torch.Tensor):
     count, trace_steps = content_tensor.shape[:2]
 
     # create new numpy array,confirm the first two dim equal
-    output_tensor = torch.zeros((count, MLP_INPUT_DIM))
+    output_tensor = torch.zeros((count, MLP_INPUT_DIM), device=content_tensor.device)
 
     for i in range(count):
         for j in range(trace_steps):
             # extract manmade features
-            manmade_vector = construct_manmade_features(content_tensor[i][j])
+            manmade_vector = construct_manmade_features_tensor(content_tensor[i][j])
 
             # update the content_array using manmade vector
             output_tensor[i] = manmade_vector
@@ -316,7 +318,9 @@ def process_data_tensor(content_tensor: torch.Tensor):
 
     # create new tensor,confirm the first two dim equal
     output_tensor = torch.zeros(
-        (count, trace_steps, TRANSFORMER_INPUT_DIM), dtype=torch.float32
+        (count, trace_steps, TRANSFORMER_INPUT_DIM),
+        dtype=torch.float32,
+        device=content_tensor.device,
     )
 
     for i in range(count):
@@ -338,7 +342,7 @@ def process_data_tensor(content_tensor: torch.Tensor):
                 network_input_tensor,
                 n_classes=N_CLASSES,
                 network_dims=network_feature_nums,
-            )
+            ).flatten()
 
             # concat manmade and network features
             concat_vector = torch.cat((manmade_vector, network_vector))

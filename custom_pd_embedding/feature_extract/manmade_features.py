@@ -171,27 +171,30 @@ class ManmadeExtractorTensor:
             # calculate the pulse amplitude max
             non_zero_indices = torch.nonzero(input_tensor[i], as_tuple=False)
             if len(non_zero_indices) > 1:
-                pulse_amplitude_max = torch.max(non_zero_indices)
+                pulse_amplitude_max = torch.max(non_zero_indices).to(
+                    input_tensor.device
+                )
 
                 # calculate the pulse amplitude sum
                 pulse_amplitude_sum = torch.sum(
                     non_zero_indices * input_tensor[i][non_zero_indices].float()
-                )
+                ).to(input_tensor.device)
 
                 # calculate the pulse amplitude mean
                 pulse_amplitude_mean = pulse_amplitude_sum / pulse_count
             else:
-                pulse_amplitude_max = torch.tensor(0.0)
-                pulse_amplitude_sum = torch.tensor(0.0)
-                pulse_amplitude_mean = torch.tensor(0.0)
+                pulse_amplitude_max = torch.tensor(0.0).to(input_tensor.device)
+                pulse_amplitude_sum = torch.tensor(0.0).to(input_tensor.device)
+                pulse_amplitude_mean = torch.tensor(0.0).to(input_tensor.device)
 
             descriptor_tensor = torch.tensor(
                 [
-                    pulse_count.item(),
-                    pulse_amplitude_max.item(),
-                    pulse_amplitude_sum.item(),
-                    pulse_amplitude_mean.item(),
-                ]
+                    pulse_count,
+                    pulse_amplitude_max,
+                    pulse_amplitude_sum,
+                    pulse_amplitude_mean,
+                ],
+                device=input_tensor.device,
             )
 
             # Append the descriptor tensor to the list
@@ -286,8 +289,13 @@ class ManmadeExtractorTensor:
             if pulse_count != 0:
                 mean_magnitude[i] = single_amplitude_sum / pulse_count
 
+        prepend_tensor = torch.tensor(
+            [0], dtype=mean_magnitude.dtype, device=mean_magnitude.device
+        )
         # calculate the gradient of the mean magnitude
-        gradient = torch.diff(mean_magnitude, prepend=0)  # Prepend 0 to maintain shape
+        gradient = torch.diff(
+            mean_magnitude, prepend=prepend_tensor
+        )  # Prepend 0 to maintain shape
         peak_count = torch.sum(
             (gradient[:-1] > 0) & (gradient[1:] < 0)
         ).item()  # Count peaks

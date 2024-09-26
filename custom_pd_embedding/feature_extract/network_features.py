@@ -75,6 +75,9 @@ class NetworkExtractorResnetFineTune:
             / "model/resnet/resnet18/resnet18InVitCustom_09-13-24_22-30-45.pth"
         )
         resnet18.load_state_dict(torch.load(resnet18_path))
+        # move the model to the device
+        device = input_array.device
+        resnet18.to(device)
         # origin model architecture is fc relu fc,but now only need the first fc layer to get network features instead of classification
         resnet18.model.fc = nn.Sequential(resnet18.model.fc[0])
         network_vector = resnet18(input_array)

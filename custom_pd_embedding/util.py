@@ -57,7 +57,9 @@ def construct_manmade_features_tensor(input_tensor: torch.Tensor) -> torch.Tenso
     )
 
     # Flatten the tensor and concatenate with additional features
-    additional_features = torch.tensor([skewness_cycle, kurtosis_cycle, peak_num])
+    additional_features = torch.tensor(
+        [skewness_cycle, kurtosis_cycle, peak_num], device=input_tensor.device
+    )
     manmade_vector = torch.cat((manmade_tensor.flatten(), additional_features))
 
     return manmade_vector

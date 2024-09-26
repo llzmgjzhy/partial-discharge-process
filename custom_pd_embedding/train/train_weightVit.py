@@ -44,7 +44,7 @@ def getArgparse():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=800,
+        default=20,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
@@ -120,7 +120,7 @@ def train(args, model, trainLoader, testLoader):
         epoch_accuracy = 0
         for _, (data, label) in loop:
             data = data.to(device)
-            label = label.to(device)
+            label = label.to(device).long()
 
             output = model(data)
             loss = criterion(output, label)

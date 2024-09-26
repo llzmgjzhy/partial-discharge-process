@@ -77,17 +77,9 @@ class weightVit(nn.Module):
     def forward(self, x):
         # process data for different classifier
         # x shape is (batch_size,trace_steps,h=100,w=100)
-
-        # cause data process code has existed,but is numpy type.for code reuse,firstly turn x into numpy,and then turn into tensor when process is finished
-        x_np = x.cpu().numpy()
-        x_mlp = process_data_for_mlp(x_np)
-        x_resnet = process_data_for_resnet(x_np)
-        x_vit = process_data(x_np)
-
-        # turn into tensor
-        x_mlp = torch.from_numpy(x_mlp).float().to(device)
-        x_resnet = torch.from_numpy(x_resnet).float().to(device)
-        x_vit = torch.from_numpy(x_vit).float().to(device)
+        x_mlp = process_data_for_mlp_tensor(x)
+        x_resnet = process_data_for_resnet_tensor(x)
+        x_vit = process_data_tensor(x)
 
         # classifiers inference
         with torch.no_grad():
@@ -117,12 +109,8 @@ class weightVit(nn.Module):
         # get weights and allocate to the classifiers
         weightVit_input = self.to_latent(weightVit_input)
         weights = torch.softmax(self.mlp_head(weightVit_input), dim=-1)
-        w1, w2, w3 = weights[:, 0], weights[:, 1], weights[:, 2]
-        final_pre = (
-            w1.unsqueeze(1) * mlp_pre
-            + w2.unsqueeze(1) * resnet_pre
-            + w3.unsqueeze(1) * vit_pre
-        )
+        w1, w2, w3 = torch.chunk(weights, 3, dim=1)
+        final_pre = w1 * mlp_pre + w2 * resnet_pre + w3 * vit_pre
 
         return final_pre
 
