@@ -275,10 +275,12 @@ class ManmadeExtractorTensor:
             non_zero_indices = torch.nonzero(input_tensor[i], as_tuple=False).squeeze()
 
             # Calculate the pulse amplitude sum
-            single_amplitude_sum = torch.sum(input_tensor[i][non_zero_indices])
+            single_amplitude_sum = torch.sum(
+                input_tensor[i][non_zero_indices] * non_zero_indices.float()
+            )
 
             # Pulse count in specified phase window
-            pulse_count = non_zero_indices.numel()  # Count of non-zero elements
+            pulse_count = torch.sum(input_tensor[i])
 
             # Update the mean magnitude of specified phase window
             if pulse_count != 0:
