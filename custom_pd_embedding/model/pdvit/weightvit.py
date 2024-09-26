@@ -126,6 +126,7 @@ class weightVit(nn.Module):
 
         return final_pre
 
+
 class multiWeightVit(nn.Module):
     def __init__(
         self,
@@ -145,6 +146,7 @@ class multiWeightVit(nn.Module):
         vit_path,
     ):
         super().__init__()
+        self.num_classes = num_classes
         # vit pipeline config
         patch_dim = num_classifiers * num_classes
 
@@ -229,11 +231,7 @@ class multiWeightVit(nn.Module):
         # get weights and allocate to the classifiers
         weightVit_input = self.to_latent(weightVit_input)
         weights = torch.softmax(self.mlp_head(weightVit_input), dim=-1)
-        w1, w2, w3 = weights[:, 0], weights[:, 1], weights[:, 2]
-        final_pre = (
-            w1.unsqueeze(1) * mlp_pre
-            + w2.unsqueeze(1) * resnet_pre
-            + w3.unsqueeze(1) * vit_pre
-        )
+        w1, w2, w3 = torch.chunk(weights, 3, dim=1)
+        final_pre = w1 * mlp_pre + w2 * resnet_pre + w3 * vit_pre
 
         return final_pre

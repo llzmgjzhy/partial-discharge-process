@@ -3,6 +3,7 @@
 # all function running procedures is based on the input
 
 import numpy as np
+import torch
 
 
 class ManmadeExtractor:
@@ -139,3 +140,151 @@ class ManmadeExtractor:
                 peak_count += 1
 
         return peak_count
+
+
+class ManmadeExtractorTensor:
+    """
+    Extract the manmade features from the input tensor.
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    def pulse_phase_descriptor(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Extract the phase descriptor of pulses of dimensions specified in the input array.
+
+        include pulse_sum ,pulse_amplitude_max,pulse_amplitude_sum,pulse_amplitude_mean
+        """
+
+        # check the input is whether valid
+        if input_tensor.ndim != 2:
+            raise ValueError(
+                "During pulse phase window feature extract,Input tensor must have 2 dimensions"
+            )
+
+        feature_list = []
+        for i in range(input_tensor.shape[0]):
+            # calculate the pulse count
+            pulse_count = torch.sum(input_tensor[i])
+
+            # calculate the pulse amplitude max
+            non_zero_indices = torch.nonzero(input_tensor[i], as_tuple=False)
+            if len(non_zero_indices) > 1:
+                pulse_amplitude_max = torch.max(non_zero_indices)
+
+                # calculate the pulse amplitude sum
+                pulse_amplitude_sum = torch.sum(
+                    non_zero_indices * input_tensor[i][non_zero_indices].float()
+                )
+
+                # calculate the pulse amplitude mean
+                pulse_amplitude_mean = pulse_amplitude_sum / pulse_count
+            else:
+                pulse_amplitude_max = torch.tensor(0.0)
+                pulse_amplitude_sum = torch.tensor(0.0)
+                pulse_amplitude_mean = torch.tensor(0.0)
+
+            descriptor_tensor = torch.tensor(
+                [
+                    pulse_count.item(),
+                    pulse_amplitude_max.item(),
+                    pulse_amplitude_sum.item(),
+                    pulse_amplitude_mean.item(),
+                ]
+            )
+
+            # Append the descriptor tensor to the list
+            feature_list.append(descriptor_tensor)
+
+        # Stack all descriptors into a final tensor with shape [num_samples, 4]
+        feature_tensor = torch.stack(feature_list)
+
+        return feature_tensor
+
+    def skewness_cycle(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Calculate the skewness of the input array.
+        """
+        # check the input is whether valid
+        if input_tensor.ndim != 2:
+            raise ValueError(
+                "During skewness cycle feature extract,Input tensor must have 2 dimensions"
+            )
+
+        # calculate the mean of the input array
+        mean = torch.mean(input_tensor)
+
+        # calculate the standard deviation of the input array
+        std = torch.std(input_tensor)
+
+        # Add a small epsilon to std to avoid division by zero
+        epsilon = 1e-8
+        std = std + epsilon
+
+        # calculate the skewness of the input array
+        skewness = torch.sum((input_tensor - mean) ** 3) / (
+            input_tensor.numel() * std**3
+        )
+
+        return skewness
+
+    def kurtosis_cycle(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Calculate the kurtosis of the input array.
+        """
+        # check the input is whether valid
+        if input_tensor.ndim != 2:
+            raise ValueError(
+                "During kurtosis cycle feature extract,Input tensor must have 2 dimensions"
+            )
+
+        # calculate the mean of the input array
+        mean = torch.mean(input_tensor)
+
+        # calculate the standard deviation of the input array
+        std = torch.std(input_tensor)
+
+        # Add a small epsilon to std to avoid division by zero
+        epsilon = 1e-8
+        std = std + epsilon
+
+        # calculate the kurtosis of the input array
+        kurtosis = torch.sum((input_tensor - mean) ** 4) / (
+            input_tensor.numel() * std**4
+        )
+
+        return kurtosis
+
+    def peak_num(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """
+        Calculate the peak num of the input array.
+        """
+        # check the input is whether valid
+        if input_tensor.ndim != 2:
+            raise ValueError(
+                "During peak num feature extract,Input tensor must have 2 dimensions"
+            )
+
+        # Calculate pulse count in each column
+        pulse_counts = torch.sum(input_tensor, dim=1)
+
+        # Calculate the single amplitude sum directly, considering non-zero values
+        single_amplitude_sums = torch.sum(
+            input_tensor * (input_tensor > 0).float(), dim=1
+        )
+
+        # Calculate the mean magnitude of each phase window
+        mean_magnitude = torch.where(
+            pulse_counts != 0,
+            single_amplitude_sums / pulse_counts,
+            torch.tensor(0.0, device=input_tensor.device),
+        )
+
+        # calculate the gradient of the mean magnitude
+        gradient = torch.diff(mean_magnitude, prepend=0)  # Prepend 0 to maintain shape
+        peak_count = torch.sum(
+            (gradient[:-1] > 0) & (gradient[1:] < 0)
+        ).item()  # Count peaks
+
+        return torch.tensor(peak_count, device=input_tensor.device)
