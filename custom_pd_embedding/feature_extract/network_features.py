@@ -29,6 +29,28 @@ class NetworkExtractor:
         return network_vector
 
 
+class NetworkExtractorTensor:
+    """
+    Extract the network features from the input array.
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    def resnet18_feature(self, input_tensor: Tensor, feature_num: int) -> Tensor:
+        """
+        extract the features by the resnet18 model.
+
+        result'dim is depend on the param feature_num,which represent the size of dim that the transformer can accept in addition to artificial features dim.
+        """
+
+        # calculate the resnet18 feature of the input array
+        resnet18 = RESNET18(n_classes=feature_num)
+        network_vector = resnet18(input_tensor)
+
+        return network_vector
+
+
 class NetworkExtractorResnetFineTune:
     """
     Extract the network features from the input array.
@@ -39,7 +61,7 @@ class NetworkExtractorResnetFineTune:
 
     def resnet18_feature(
         self, input_array: Tensor, n_classes: int, feature_num: int
-    ) -> int:
+    ) -> Tensor:
         """
         extract the features by the resnet18 model.
 

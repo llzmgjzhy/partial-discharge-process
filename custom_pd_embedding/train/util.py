@@ -81,6 +81,36 @@ def prepare_input_for_resnet(input_array: np.ndarray):
     return input_tensor
 
 
+def prepare_input_for_resnet_tensor(input_tensor: torch.Tensor):
+    """
+    prepare for input tensor:regulation the input tensor and add the channel dim to match the input of resnet model.
+
+    arguments:
+    input_tensor: The input tensor to be prepared.
+    """
+    if input_tensor.ndim != 2:
+        raise ValueError(
+            "During resnet18 feature prepare,Input tensor must have 2 dimensions"
+        )
+
+    # Check if the denominator is zero
+    if torch.max(input_tensor) - torch.min(input_tensor) == 0:
+        normalized_tensor = torch.zeros_like(input_tensor)
+    else:
+        normalized_tensor = (
+            2
+            * (
+                (input_tensor - torch.min(input_tensor))
+                / (torch.max(input_tensor) - torch.min(input_tensor))
+            )
+            - 1
+        )
+
+    input_tensor = normalized_tensor.unsqueeze(0).unsqueeze(0).float()
+
+    return input_tensor
+
+
 def process_data_for_resnet(content_array: np.ndarray):
     """
     process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the resnet model.
@@ -100,6 +130,27 @@ def process_data_for_resnet(content_array: np.ndarray):
             output_array[i][j] = network_input_array
 
     return output_array.astype(np.float32)
+
+
+def process_data_for_resnet_tensor(content_tensor: torch.Tensor):
+    """
+    process content_tensor.original array is tensor with shape (trace_steps,h,w).that is invalid for the resnet model.
+
+    arguments:
+    content_tensor: The content tensor to be processed.
+
+    procedure:
+    regulation the input tensor,add the channel dim to match the input of resnet model and turn the type into float32.
+    """
+    count, trace_steps = content_tensor.shape[:2]
+    output_tensor = torch.zeros_like(content_tensor, dtype=torch.float32)
+
+    for i in range(count):
+        for j in range(trace_steps):
+            network_input_tensor = prepare_input_for_resnet_tensor(content_tensor[i][j])
+            output_tensor[i][j] = network_input_tensor
+
+    return output_tensor
 
 
 def process_data_for_vit(content_array: np.ndarray):
@@ -160,6 +211,41 @@ def process_data_for_mlp(content_array: np.ndarray):
     return output_array.astype(np.float32)
 
 
+def process_data_for_mlp_tensor(content_tensor: torch.Tensor):
+    """
+    process content_tensor.original array is tensor with shape (trace_steps,h,w).that is invalid for the transformer model.
+
+    arguments:
+    content_tensor: The content tensor to be processed.
+
+    procedure:
+    extract manmade features and reshape the content tensor to (count,feature_dim)
+    """
+
+    # get the dims of content_tensor
+    # count is content num,trace_steps is the num of backtracking images
+    count, trace_steps = content_tensor.shape[:2]
+
+    # create new numpy array,confirm the first two dim equal
+    output_tensor = torch.zeros((count, MLP_INPUT_DIM))
+
+    for i in range(count):
+        for j in range(trace_steps):
+            # extract manmade features
+            manmade_vector = construct_manmade_features(content_tensor[i][j])
+
+            # update the content_array using manmade vector
+            output_tensor[i] = manmade_vector
+
+    # regulation the output array
+    min_vals = output_tensor.min(dim=0, keepdim=True).values
+    max_vals = output_tensor.max(dim=0, keepdim=True).values
+    epsilon = 1e-8
+    output_tensor = (output_tensor - min_vals) / (max_vals - min_vals + epsilon)
+
+    return output_tensor.float()
+
+
 def process_data(content_array: np.ndarray):
     """
     process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the transformer model.
@@ -211,6 +297,55 @@ def process_data(content_array: np.ndarray):
             output_array[i][j] = concat_vector
 
     return output_array.astype(np.float32)
+
+
+def process_data_tensor(content_tensor: torch.Tensor):
+    """
+    process content_tensor.original tensor is tensor with shape (trace_steps,h,w).that is invalid for the transformer model.
+
+    arguments:
+    content_tensor: The content tensor to be processed.
+
+    procedure:
+    reshape the content_tensor to (trace_steps,TRANSFORMER_INPUT_DIM)
+    """
+
+    # get the dims of content_tensor
+    # count is content num,trace_steps is the num of backtracking images
+    count, trace_steps = content_tensor.shape[:2]
+
+    # create new tensor,confirm the first two dim equal
+    output_tensor = torch.zeros(
+        (count, trace_steps, TRANSFORMER_INPUT_DIM), dtype=torch.float32
+    )
+
+    for i in range(count):
+        for j in range(trace_steps):
+            # extract manmade features
+            manmade_vector = construct_manmade_features_tensor(content_tensor[i][j])
+            # normalize manmade_vector
+            min_val = torch.min(manmade_vector)
+            max_val = torch.max(manmade_vector)
+            epsilon = 1e-8
+            manmade_vector = (manmade_vector - min_val) / (max_val - min_val + epsilon)
+
+            # extract the network features
+            # confirm network dims
+            network_feature_nums = TRANSFORMER_INPUT_DIM - len(manmade_vector)
+            # regulation the input array to the resnet model
+            network_input_tensor = prepare_input_for_resnet_tensor(content_tensor[i][j])
+            network_vector = construct_network_features(
+                network_input_tensor,
+                n_classes=N_CLASSES,
+                network_dims=network_feature_nums,
+            )
+
+            # concat manmade and network features
+            concat_vector = torch.cat((manmade_vector, network_vector))
+            # update the content_array using concat vector
+            output_tensor[i][j] = concat_vector
+
+    return output_tensor
 
 
 def save_processed_data_to_json(

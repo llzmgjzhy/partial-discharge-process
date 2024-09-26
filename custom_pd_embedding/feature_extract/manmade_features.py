@@ -266,20 +266,23 @@ class ManmadeExtractorTensor:
                 "During peak num feature extract,Input tensor must have 2 dimensions"
             )
 
-        # Calculate pulse count in each column
-        pulse_counts = torch.sum(input_tensor, dim=1)
+        peak_count = 0
 
-        # Calculate the single amplitude sum directly, considering non-zero values
-        single_amplitude_sums = torch.sum(
-            input_tensor * (input_tensor > 0).float(), dim=1
-        )
+        # Calculate the mean magnitude of every phase window
+        mean_magnitude = torch.zeros(input_tensor.shape[0], device=input_tensor.device)
+        for i in range(input_tensor.shape[0]):
+            # Get non-zero indices
+            non_zero_indices = torch.nonzero(input_tensor[i], as_tuple=False).squeeze()
 
-        # Calculate the mean magnitude of each phase window
-        mean_magnitude = torch.where(
-            pulse_counts != 0,
-            single_amplitude_sums / pulse_counts,
-            torch.tensor(0.0, device=input_tensor.device),
-        )
+            # Calculate the pulse amplitude sum
+            single_amplitude_sum = torch.sum(input_tensor[i][non_zero_indices])
+
+            # Pulse count in specified phase window
+            pulse_count = non_zero_indices.numel()  # Count of non-zero elements
+
+            # Update the mean magnitude of specified phase window
+            if pulse_count != 0:
+                mean_magnitude[i] = single_amplitude_sum / pulse_count
 
         # calculate the gradient of the mean magnitude
         gradient = torch.diff(mean_magnitude, prepend=0)  # Prepend 0 to maintain shape

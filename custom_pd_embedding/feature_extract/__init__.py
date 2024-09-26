@@ -1,2 +1,2 @@
-from .manmade_features import ManmadeExtractor
+from .manmade_features import ManmadeExtractor,ManmadeExtractorTensor
 from .network_features import NetworkExtractor, NetworkExtractorResnetFineTune
