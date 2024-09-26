@@ -47,7 +47,7 @@ def read_data(path: str, trace_steps: int = 9):
                 response_label_array.append(label)
 
         return np.array(response_content_array, dtype=np.float32), np.array(
-            response_label_array, dtype=np.float32
+            response_label_array
         )
     except Exception as e:
         print("catch data file error", e)

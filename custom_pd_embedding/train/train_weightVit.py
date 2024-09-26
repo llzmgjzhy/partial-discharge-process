@@ -120,7 +120,7 @@ def train(args, model, trainLoader, testLoader):
         epoch_accuracy = 0
         for _, (data, label) in loop:
             data = data.to(device)
-            label = label.to(device).long()
+            label = label.to(device)
 
             output = model(data)
             loss = criterion(output, label)
