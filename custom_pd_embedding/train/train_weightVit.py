@@ -102,6 +102,11 @@ def getArgparse():
         default=10,
         help="random seed to generate the train and test dataset",
     )
+    parser.add_argument(
+        "--is-multi",
+        action="store_true",
+        help="Is multi weightVit",
+    )
     return parser.parse_args()
 
 
@@ -199,7 +204,7 @@ if __name__ == "__main__":
     mlp_path = PROJECT_ROOT / "custom_pd_embedding/model/mlp/mlp_09-12-24_17-17-45.pth"
     resnet_path = (
         PROJECT_ROOT
-        / "custom_pd_embedding/model/resnet/resnet18/resnet18_09-12-24_11-32-44.pth"
+        / "custom_pd_embedding/model/resnet/resnet18/resnet18_09-27-24_14-48-05.pth"
     )
     vit_path = (
         PROJECT_ROOT
@@ -218,6 +223,7 @@ if __name__ == "__main__":
         mlp_path=mlp_path,
         resnet_path=resnet_path,
         vit_path=vit_path,
+        is_multi=args.is_multi,
     ).to(device)
 
     # train transformer
