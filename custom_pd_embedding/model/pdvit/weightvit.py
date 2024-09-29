@@ -80,17 +80,13 @@ class weightVit(nn.Module):
 
     def forward(self, x):
         # process data for different classifier
-        # x shape is (batch_size,trace_steps,h=100,w=100)
-        # cause data process code has existed,but is numpy type.for code reuse,firstly turn x into numpy,and then turn into tensor when process is finished
-        x_np = x.cpu().numpy()
-        x_mlp = process_data_for_mlp(x_np)
-        x_resnet = process_data_for_resnet(x_np)
-        x_vit = process_data(x_np)
+        # x shape is (batch_size,trace_steps,11171=403+768+10000)
 
-        # turn into tensor
-        x_mlp = torch.from_numpy(x_mlp).float().to(device)
-        x_resnet = torch.from_numpy(x_resnet).float().to(device)
-        x_vit = torch.from_numpy(x_vit).float().to(device)
+        x_mlp = x[:, :, :403]
+        x_mlp = x_mlp.squeeze(1)
+        x_resnet = x[:, :, 403:10403]
+        x_resnet = x_resnet.reshape(x_resnet.shape[0], x_resnet.shape[1], 100, 100)
+        x_vit = x[:, :, 10403:]
 
         # classifiers inference
         with torch.no_grad():

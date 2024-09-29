@@ -107,6 +107,27 @@ def getArgparse():
         action="store_true",
         help="Is multi weightVit",
     )
+    parser.add_argument(
+        "--mlp-path",
+        type=str,
+        default=PROJECT_ROOT
+        / "custom_pd_embedding/model/mlp/mlp_09-12-24_17-17-45.pth",
+        help="The mlp model path",
+    )
+    parser.add_argument(
+        "--resnet-path",
+        type=str,
+        default=PROJECT_ROOT
+        / "custom_pd_embedding/model/resnet/resnet18/resnet18_09-27-24_14-48-05.pth",
+        help="The resnet model path",
+    )
+    parser.add_argument(
+        "--vit-path",
+        type=str,
+        default=PROJECT_ROOT
+        / "custom_pd_embedding/model/vit/vit_base/vit16_09-14-24_15-08-47.pth",
+        help="The vit model path",
+    )
     return parser.parse_args()
 
 
@@ -180,13 +201,20 @@ if __name__ == "__main__":
     console_save_args_to_json(args, PROJECT_ROOT, time_now, tb_path=tensorBoard_path)
 
     # get data
-    processed_content_array, label_array = read_data(
-        args.path, trace_steps=args.trace_steps
-    )
+    if os.path.exists(
+        PROJECT_ROOT / f"data/storage/weightVit_{args.trace_steps}steps.json"
+    ):
+        content_array, label_array = read_processed_data_from_json(
+            PROJECT_ROOT / f"data/storage/weightVit_{args.trace_steps}steps.json"
+        )
+    else:
+        raise FileNotFoundError(
+            "To speed up data processing,please save the data in advance"
+        )
 
     # making dataset
     X_train, X_test, y_train, y_test = train_test_split(
-        processed_content_array,
+        content_array,
         label_array,
         train_size=0.75,
         random_state=args.random_seed,
@@ -199,17 +227,6 @@ if __name__ == "__main__":
     testLoader = DataLoader(testDataset, batch_size=args.batch_size, shuffle=False)
 
     # model
-
-    # define the classifier model path in the weightVit model
-    mlp_path = PROJECT_ROOT / "custom_pd_embedding/model/mlp/mlp_09-12-24_17-17-45.pth"
-    resnet_path = (
-        PROJECT_ROOT
-        / "custom_pd_embedding/model/resnet/resnet18/resnet18_09-27-24_14-48-05.pth"
-    )
-    vit_path = (
-        PROJECT_ROOT
-        / "custom_pd_embedding/model/vit/vit_base/vit16_09-14-24_15-08-47.pth"
-    )
     # 📌:the model config mainly depend on num_classes and dim,depth,heads and mlp_dim
     vitModel = weightVit(
         num_classifiers=3,
@@ -220,9 +237,9 @@ if __name__ == "__main__":
         mlp_dim=args.mlp_dim,
         dropout=0.1,
         emb_dropout=0.1,
-        mlp_path=mlp_path,
-        resnet_path=resnet_path,
-        vit_path=vit_path,
+        mlp_path=args.mlp_path,
+        resnet_path=args.resnet_path,
+        vit_path=args.vit_path,
         is_multi=args.is_multi,
     ).to(device)
 

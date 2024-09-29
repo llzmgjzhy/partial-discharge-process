@@ -409,3 +409,32 @@ def console_save_args_to_json(args, root_path, time_now, tb_path: str = "runs"):
         root_path / ARGS_JSON_PATH / tb_path / time_now / f"{time_now}.json", "w"
     ) as f:
         f.write(args_json)
+
+
+def make_weightVit_data(
+    content_array: np.ndarray, root_path: str, trace_steps: int = 9
+):
+    """
+    Make the weightVit data.
+
+    arguments:
+    content_array: The content array to be processed.
+    trace_steps: The number of backtracking images.
+    """
+
+    origin_data, origin_label_array = read_data(
+        root_path / "data/storage/all_ai_data_train.json", trace_steps=9
+    )
+    vit_data, vit_label_array = read_processed_data_from_json(
+        root_path / f"data/storage/feature_processed_data_{trace_steps}steps.json"
+    )
+    mlp_data = vit_data[:, :, :403]
+    resnet_data = process_data_for_resnet(origin_data)
+    resnet_data = resnet_data.reshape(1169, 9, -1)
+    output = np.concatenate([mlp_data, resnet_data, vit_data], axis=2)
+
+    save_processed_data_to_json(
+        output,
+        origin_label_array,
+        root_path / f"data/storage/weightVit_{trace_steps}steps.json",
+    )
