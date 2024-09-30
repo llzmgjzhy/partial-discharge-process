@@ -115,7 +115,8 @@ class weightVit(nn.Module):
 
         # get weights and allocate to the classifiers
         weightVit_input = self.to_latent(weightVit_input)
-        weights = torch.softmax(self.mlp_head(weightVit_input), dim=-1)
+        # weights = torch.softmax(self.mlp_head(weightVit_input), dim=-1)
+        weights = self.mlp_head(weightVit_input)
         w1, w2, w3 = torch.chunk(weights, 3, dim=1)
         final_pre = w1 * mlp_pre + w2 * resnet_pre + w3 * vit_pre
 

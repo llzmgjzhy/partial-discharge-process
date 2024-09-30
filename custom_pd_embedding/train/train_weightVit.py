@@ -189,10 +189,10 @@ def train(args, model, trainLoader, testLoader):
         )
 
     # save model dict
-    model_save_path = PROJECT_ROOT / "custom_pd_embedding/model/pdvit"
-    torch.save(
-        model.state_dict(), model_save_path / f"pdvit_{args.trace_steps}_{time_now}.pth"
-    )
+    # model_save_path = PROJECT_ROOT / "custom_pd_embedding/model/pdvit"
+    # torch.save(
+    #     model.state_dict(), model_save_path / f"pdvit_{args.trace_steps}_{time_now}.pth"
+    # )
 
 
 if __name__ == "__main__":
