@@ -389,7 +389,9 @@ def read_processed_data_from_json(path: str):
     return processed_array, label_array
 
 
-def console_save_args_to_json(args, root_path, time_now, tb_path: str = "runs"):
+def console_save_args_to_json(
+    args, root_path, time_now, tb_path: str = "runs", args_json_path=ARGS_JSON_PATH
+):
     """
     Save the args to the json file.
 
@@ -406,7 +408,7 @@ def console_save_args_to_json(args, root_path, time_now, tb_path: str = "runs"):
 
     # save the config to json
     with open(
-        root_path / ARGS_JSON_PATH / tb_path / time_now / f"{time_now}.json", "w"
+        root_path / args_json_path / tb_path / time_now / f"{time_now}.json", "w"
     ) as f:
         f.write(args_json)
 

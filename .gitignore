@@ -18,3 +18,4 @@ temp.py
 
 # config file
 custom_pd_embedding/train/**/*.json
+custom_pd_embedding/test/**/*.json
