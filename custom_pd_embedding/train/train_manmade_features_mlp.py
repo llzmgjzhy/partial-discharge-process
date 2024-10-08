@@ -43,7 +43,7 @@ def getArgparse():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=150,
+        default=500,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
@@ -172,18 +172,20 @@ if __name__ == "__main__":
     console_save_args_to_json(args, PROJECT_ROOT, time_now, tb_path=tensorBoard_path)
 
     # get data
-    if os.path.exists(PROJECT_ROOT / f"data/storage/manmade_features.json"):
+    if os.path.exists(
+        PROJECT_ROOT / f"data/storage/manmade_features_regularization_row.json"
+    ):
         processed_content_array, label_array = read_processed_data_from_json(
-            PROJECT_ROOT / f"data/storage/manmade_features.json"
+            PROJECT_ROOT / f"data/storage/manmade_features_regularization_row.json"
         )
     else:
         content_array, label_array = read_data(args.path, trace_steps=args.trace_steps)
         # process content_array
-        processed_content_array = process_data_for_mlp(content_array)
+        processed_content_array = process_data_for_mlp_row(content_array)
         save_processed_data_to_json(
             processed_content_array,
             label_array,
-            PROJECT_ROOT / f"data/storage/manmade_features.json",
+            PROJECT_ROOT / f"data/storage/manmade_features_regularization_row.json",
         )
 
     # making dataset

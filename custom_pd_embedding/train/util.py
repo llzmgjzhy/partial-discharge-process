@@ -204,6 +204,70 @@ def process_data_for_mlp(content_array: np.ndarray):
             # update the content_array using manmade vector
             output_array[i] = manmade_vector
 
+    return output_array.astype(np.float32)
+
+
+def process_data_for_mlp_row(content_array: np.ndarray):
+    """
+    process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the transformer model.
+
+    arguments:
+    content_array: The content array to be processed.
+
+    procedure:
+    extract manmade features and reshape the content array to (count,feature_dim)
+    """
+
+    # get the dims of content_array
+    # count is content num,trace_steps is the num of backtracking images
+    count, trace_steps = content_array.shape[:2]
+
+    # create new numpy array,confirm the first two dim equal
+    output_array = np.zeros((count, MLP_INPUT_DIM))
+
+    for i in range(count):
+        for j in range(trace_steps):
+            # extract manmade features
+            manmade_vector = construct_manmade_features(content_array[i][j])
+
+            # regularization
+            min_val = np.min(manmade_vector)
+            max_val = np.max(manmade_vector)
+            epsilon = 1e-8
+            manmade_vector = (manmade_vector - min_val) / (max_val - min_val + epsilon)
+
+            # update the content_array using manmade vector
+            output_array[i] = manmade_vector
+
+    return output_array.astype(np.float32)
+
+
+def process_data_for_mlp_col(content_array: np.ndarray):
+    """
+    process content_array.original array is numpy array with shape (trace_steps,h,w).that is invalid for the transformer model.
+
+    arguments:
+    content_array: The content array to be processed.
+
+    procedure:
+    extract manmade features and reshape the content array to (count,feature_dim)
+    """
+
+    # get the dims of content_array
+    # count is content num,trace_steps is the num of backtracking images
+    count, trace_steps = content_array.shape[:2]
+
+    # create new numpy array,confirm the first two dim equal
+    output_array = np.zeros((count, MLP_INPUT_DIM))
+
+    for i in range(count):
+        for j in range(trace_steps):
+            # extract manmade features
+            manmade_vector = construct_manmade_features(content_array[i][j])
+
+            # update the content_array using manmade vector
+            output_array[i] = manmade_vector
+
     # regulation the output array
     min_vals = output_array.min(axis=0)
     max_vals = output_array.max(axis=0)
@@ -425,7 +489,7 @@ def make_weightVit_data(
     """
 
     origin_data, origin_label_array = read_data(
-        root_path / "data/storage/all_ai_data_train.json", trace_steps=9
+        root_path / "data/storage/all_ai_data_train.json", trace_steps=trace_steps
     )
     vit_data, vit_label_array = read_processed_data_from_json(
         root_path / f"data/storage/feature_processed_data_{trace_steps}steps.json"

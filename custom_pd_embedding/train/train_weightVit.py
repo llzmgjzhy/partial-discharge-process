@@ -111,7 +111,7 @@ def getArgparse():
         "--mlp-path",
         type=str,
         default=PROJECT_ROOT
-        / "custom_pd_embedding/model/mlp/mlp_09-12-24_17-17-45.pth",
+        / "custom_pd_embedding/model/mlp/mlp_10-08-24_20-03-43.pth",
         help="The mlp model path",
     )
     parser.add_argument(

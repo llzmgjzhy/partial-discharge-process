@@ -152,8 +152,8 @@ def test(args, model, trainLoader, testLoader):
                 epoch_val_loss += val_loss / len(testLoader)
 
         # tensorBoard
-        writer_test.add_scalar("loss", epoch_val_loss, 1)
-        writer_test.add_scalar("acc", epoch_val_accuracy, 1)
+        writer_test.add_scalar("loss", epoch_val_loss, epoch)
+        writer_test.add_scalar("acc", epoch_val_accuracy, epoch)
 
         print(f" val_loss : {epoch_val_loss:.4f} - val_acc: {epoch_val_accuracy:.4f}\n")
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
     # making dataset
     X_train, X_test, y_train, y_test = train_test_split(
-        content_array,
+        processed_content_array,
         label_array,
         train_size=0.75,
         random_state=args.random_seed,
