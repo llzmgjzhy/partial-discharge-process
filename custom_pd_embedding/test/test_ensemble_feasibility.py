@@ -20,10 +20,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from custom_pd_embedding.read_data.ai_data_train.dataset import AItrainDataset
 import timm
 from custom_pd_embedding.model import MLP, RESNET18, ViT
-from matplotlib_venn import venn3
 import matplotlib.pyplot as plt
 from custom_pd_embedding.train.util import *
-from upsetplot import plot,from_indicators
+from upsetplot import plot, from_indicators
 import pandas as pd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -132,8 +131,6 @@ def getArgparse():
 
 
 def test(args, mlp_model, resnet_model, vit_model, trainLoader, testLoader):
-    # loss function
-    criterion = nn.CrossEntropyLoss()
 
     with torch.no_grad():
         mlp_model.eval()
@@ -167,24 +164,18 @@ def test(args, mlp_model, resnet_model, vit_model, trainLoader, testLoader):
             vit_correct = (val_vit_output.argmax(dim=1) == label).item()
             vit_global_correct.append(vit_correct)
 
-        mlp_correct_indices = set(np.where(np.array(mlp_global_correct) == 1)[0])
-        resnet_correct_indices = set(np.where(np.array(resnet_global_correct) == 1)[0])
-        vit_correct_indices = set(np.where(np.array(vit_global_correct) == 1)[0])
-
-        data = {"mlp": mlp_global_correct, "resnet": resnet_global_correct, "vit": vit_global_correct}
-
-        # draw venn
-        # venn3(
-        #     [mlp_correct_indices, resnet_correct_indices, vit_correct_indices],
-        #     set_labels=("Classifier 1", "Classifier 2", "Classifier 3"),
-        # )
+        upset_data = {
+            "mlp": mlp_global_correct,
+            "resnet": resnet_global_correct,
+            "vit": vit_global_correct,
+        }
 
         # draw upset
-        df = pd.DataFrame(data)
-        plot(from_indicators(df),subset_size='count',show_counts='%d')
+        df = pd.DataFrame(upset_data)
+        plot(from_indicators(df), subset_size="count", show_counts="%d")
 
-    plt.title("upsetPlot Diagram of Classifiers Based on Correct Predictions")
-    plt.show()
+        plt.title("upsetPlot Diagram of Classifiers Based on Correct Predictions")
+        plt.show()
 
 
 if __name__ == "__main__":
