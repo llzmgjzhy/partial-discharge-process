@@ -32,10 +32,14 @@ class weightVit(nn.Module):
         resnet_path,
         vit_path,
         is_multi=False,
+        trace_steps=1,
     ):
         super().__init__()
+        self.trace_steps = trace_steps
+        self.num_classes = num_classes
         # vit pipeline config
-        patch_dim = num_classifiers * num_classes
+        # classifier num + one label
+        patch_dim = (num_classifiers + 1) * num_classes
 
         self.to_patch_embedding = nn.Sequential(
             nn.LayerNorm(patch_dim),
@@ -45,6 +49,7 @@ class weightVit(nn.Module):
 
         self.weight_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
+
         self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
         self.pool = pool
         self.to_latent = nn.Identity()
@@ -57,11 +62,11 @@ class weightVit(nn.Module):
         # three classifier
 
         # manmade feature classifier
-        self.mlp = MLP(input_size=MLP_INPUT_DIM, output_size=num_classes)
+        self.mlp = MLP(input_size=MLP_INPUT_DIM, output_size=num_classes).to(device)
         self.mlp.load_state_dict(torch.load(mlp_path))
 
         # neural network feature classifier
-        self.resnet18 = RESNET18(n_classes=num_classes)
+        self.resnet18 = RESNET18(n_classes=num_classes).to(device)
         self.resnet18.load_state_dict(torch.load(resnet_path))
 
         # vit classifier
@@ -75,27 +80,45 @@ class weightVit(nn.Module):
             mlp_dim=64,
             dropout=0.1,
             emb_dropout=0.1,
-        )
+        ).to(device)
         self.vit_classifier.load_state_dict(torch.load(vit_path))
 
-    def forward(self, x):
+    def forward(self, x, label):
         # process data for different classifier
         # x shape is (batch_size,trace_steps,11171=403+768+10000)
 
         x_mlp = x[:, :, :403]
-        x_mlp = x_mlp.squeeze(1)
         x_resnet = x[:, :, 403:10403]
         x_resnet = x_resnet.reshape(x_resnet.shape[0], x_resnet.shape[1], 100, 100)
         x_vit = x[:, :, 10403:]
 
+        mlp_pre = torch.empty(
+            self.trace_steps, x.shape[0], self.num_classes, device=device
+        )
+        resnet_pre = torch.empty(
+            self.trace_steps, x.shape[0], self.num_classes, device=device
+        )
+        vit_pre = torch.empty(
+            self.trace_steps, x.shape[0], self.num_classes, device=device
+        )
         # classifiers inference
-        with torch.no_grad():
-            mlp_pre = self.mlp(x_mlp)
-            resnet_pre = self.resnet18(x_resnet)
-            vit_pre = self.vit_classifier(x_vit)
+        for i in range(self.trace_steps):
+            with torch.no_grad():
+                mlp_pre[i] = self.mlp(x_mlp[:, i, :])
+                resnet_pre[i] = self.resnet18(x_resnet[:, i, :, :].unsqueeze(1))
+                vit_pre[i] = self.vit_classifier(x_vit[:, i, :].unsqueeze(1))
 
-        weightVit_input = torch.cat([mlp_pre, resnet_pre, vit_pre], dim=1)
-        weightVit_input = weightVit_input.unsqueeze(1)
+        # concat three classifier output and transpose input into (batch_size,trace_steps,3*num_classes)
+        weightVit_input = torch.cat([mlp_pre, resnet_pre, vit_pre], dim=2)
+        weightVit_input = torch.transpose(weightVit_input, 0, 1)
+        # one hot code for label
+        # mask
+        label[:, 0] = 0
+        # one hot coding
+        label_one_hot_arr = torch.nn.functional.one_hot(
+            label.long(), num_classes=self.num_classes
+        ).to(device)
+        weightVit_input = torch.cat([weightVit_input, label_one_hot_arr], dim=2)
 
         # backbone inference
         weightVit_input = self.to_patch_embedding(weightVit_input)
@@ -118,6 +141,6 @@ class weightVit(nn.Module):
         # weights = torch.softmax(self.mlp_head(weightVit_input), dim=-1)
         weights = self.mlp_head(weightVit_input)
         w1, w2, w3 = torch.chunk(weights, 3, dim=1)
-        final_pre = w1 * mlp_pre + w2 * resnet_pre + w3 * vit_pre
+        final_pre = w1 * mlp_pre[0] + w2 * resnet_pre[0] + w3 * vit_pre[0]
 
         return final_pre

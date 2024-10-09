@@ -44,7 +44,7 @@ def getArgparse():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=20,
+        default=40,
         help="The number of epochs to train the model",
     )
     parser.add_argument(
@@ -97,6 +97,12 @@ def getArgparse():
         help="The num of backtracking images",
     )
     parser.add_argument(
+        "--weightVit-trace-steps",
+        type=int,
+        default=4,
+        help="The num of backtracking images",
+    )
+    parser.add_argument(
         "--random-seed",
         type=int,
         default=10,
@@ -146,16 +152,16 @@ def train(args, model, trainLoader, testLoader):
         epoch_accuracy = 0
         for _, (data, label) in loop:
             data = data.to(device)
-            label = label.to(device)
+            label_first = label[:, :1].squeeze().to(device)
 
-            output = model(data)
-            loss = criterion(output, label)
+            output = model(data, label)
+            loss = criterion(output, label_first)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            acc = (output.argmax(dim=1) == label).float().mean()
+            acc = (output.argmax(dim=1) == label_first).float().mean()
             epoch_accuracy += acc / len(trainLoader)
             epoch_loss += loss / len(trainLoader)
 
@@ -169,12 +175,12 @@ def train(args, model, trainLoader, testLoader):
             epoch_val_loss = 0
             for data, label in testLoader:
                 data = data.to(device)
-                label = label.to(device)
+                label_first = label[:, :1].squeeze().to(device)
 
-                val_output = model(data)
-                val_loss = criterion(val_output, label)
+                val_output = model(data, label)
+                val_loss = criterion(val_output, label_first)
 
-                acc = (val_output.argmax(dim=1) == label).float().mean()
+                acc = (val_output.argmax(dim=1) == label_first).float().mean()
                 epoch_val_accuracy += acc / len(testLoader)
                 epoch_val_loss += val_loss / len(testLoader)
 
@@ -212,14 +218,30 @@ if __name__ == "__main__":
             "To speed up data processing,please save the data in advance"
         )
 
+    # set random seed for reproducibility
+    np.random.seed(args.random_seed)
+    # process data for trace_steps
+    steps_content_array = np.empty(
+        (content_array.shape[0], args.weightVit_trace_steps, content_array.shape[2])
+    )
+    steps_label_array = np.empty((content_array.shape[0], args.weightVit_trace_steps))
+    for i in range(content_array.shape[0]):
+        indices = np.random.choice(
+            content_array.shape[0], size=args.weightVit_trace_steps, replace=False
+        )
+
+        steps_content_array[i] = content_array[indices, 0, :]
+        steps_label_array[i] = label_array[indices]
+
     # making dataset
     X_train, X_test, y_train, y_test = train_test_split(
-        content_array,
-        label_array,
+        steps_content_array.astype(np.float32),
+        steps_label_array.astype(np.int64),
         train_size=0.75,
         random_state=args.random_seed,
         stratify=label_array,
     )
+
     trainDataset = AItrainDataset(X_train, y_train)
     testDataset = AItrainDataset(X_test, y_test)
 
@@ -241,6 +263,7 @@ if __name__ == "__main__":
         resnet_path=args.resnet_path,
         vit_path=args.vit_path,
         is_multi=args.is_multi,
+        trace_steps=args.weightVit_trace_steps,
     ).to(device)
 
     # train transformer
