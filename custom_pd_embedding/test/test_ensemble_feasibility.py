@@ -19,7 +19,7 @@ import sys
 sys.path.insert(0, str(PROJECT_ROOT))
 from custom_pd_embedding.read_data.ai_data_train.dataset import AItrainDataset
 import timm
-from custom_pd_embedding.model import MLP, RESNET18, ViT
+from custom_pd_embedding.model import MLP, RESNET18, ViT, weightVit
 import matplotlib.pyplot as plt
 from custom_pd_embedding.train.util import *
 from upsetplot import plot, from_indicators
@@ -96,6 +96,12 @@ def getArgparse():
         help="The num of backtracking images",
     )
     parser.add_argument(
+        "--weightVit-trace-steps",
+        type=int,
+        default=4,
+        help="The num of backtracking images",
+    )
+    parser.add_argument(
         "--random-seed",
         type=int,
         default=10,
@@ -127,19 +133,31 @@ def getArgparse():
         / "custom_pd_embedding/model/vit/vit_base/vit16_09-14-24_15-08-47.pth",
         help="The vit model path",
     )
+    parser.add_argument(
+        "--weightVit-path",
+        type=str,
+        default=PROJECT_ROOT
+        / "custom_pd_embedding/model/pdvit/pdvit_4_10-10-24_22-09-42.pth",
+        help="The weightVit model path",
+    )
     return parser.parse_args()
 
 
-def test(args, mlp_model, resnet_model, vit_model, trainLoader, testLoader):
+def test(
+    args, mlp_model, resnet_model, vit_model, weightVit_model, trainLoader, testLoader
+):
 
     with torch.no_grad():
         mlp_model.eval()
         resnet_model.eval()
         vit_model.eval()
+        weightVit_model.eval()
 
         mlp_global_correct = []
         resnet_global_correct = []
         vit_global_correct = []
+        weightVit_global_correct = []
+        bagging_global_correct = []
         for data, label in testLoader:
             data = data.to(device)
             label = label.to(device)
@@ -157,17 +175,35 @@ def test(args, mlp_model, resnet_model, vit_model, trainLoader, testLoader):
 
             val_vit_output = vit_model(data_vit)
 
+            weightVit_output = weightVit_model.inference(data)
+
+            # ensemble learning--bagging
+            val_mlp_pre = val_mlp_output.argmax(dim=1)
+            val_resnet_pre = val_resnet_output.argmax(dim=1)
+            val_vit_pre = val_vit_output.argmax(dim=1)
+
+            ensemble_pre = torch.stack(
+                [val_mlp_pre, val_resnet_pre, val_vit_pre], dim=1
+            )
+            ensemble_final_pre = torch.mode(ensemble_pre, dim=1)
+            ensemble_correct = (ensemble_final_pre.values == label).item()
+            bagging_global_correct.append(ensemble_correct)
+
             mlp_correct = (val_mlp_output.argmax(dim=1) == label).item()
             mlp_global_correct.append(mlp_correct)
             resnet_correct = (val_resnet_output.argmax(dim=1) == label).item()
             resnet_global_correct.append(resnet_correct)
             vit_correct = (val_vit_output.argmax(dim=1) == label).item()
             vit_global_correct.append(vit_correct)
+            weightVit_correct = (weightVit_output.argmax(dim=1) == label).item()
+            weightVit_global_correct.append(weightVit_correct)
 
         upset_data = {
             "mlp": mlp_global_correct,
             "resnet": resnet_global_correct,
             "vit": vit_global_correct,
+            "bagging": bagging_global_correct,
+            "weightVit": weightVit_global_correct,
         }
 
         # draw upset
@@ -228,5 +264,30 @@ if __name__ == "__main__":
     ).to(device)
     vit_model.load_state_dict(torch.load(args.vit_path))
 
+    weightVit_model = weightVit(
+        num_classifiers=3,
+        num_classes=6,
+        dim=args.dim,
+        depth=args.depth,
+        heads=args.heads,
+        mlp_dim=args.mlp_dim,
+        dropout=0.1,
+        emb_dropout=0.1,
+        mlp_path=args.mlp_path,
+        resnet_path=args.resnet_path,
+        vit_path=args.vit_path,
+        is_multi=args.is_multi,
+        trace_steps=args.weightVit_trace_steps,
+    ).to(device)
+    weightVit_model.load_state_dict(torch.load(args.weightVit_path))
+
     # train transformer
-    test(args, mlp_model, resnet_model, vit_model, trainLoader, testLoader)
+    test(
+        args,
+        mlp_model,
+        resnet_model,
+        vit_model,
+        weightVit_model,
+        trainLoader,
+        testLoader,
+    )

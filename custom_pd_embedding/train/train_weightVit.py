@@ -194,11 +194,14 @@ def train(args, model, trainLoader, testLoader):
             f"Epoch : {epoch+1} - loss : {epoch_loss:.4f} - acc: {epoch_accuracy:.4f} - val_loss : {epoch_val_loss:.4f} - val_acc: {epoch_val_accuracy:.4f}\n"
         )
 
+    # print weights
+    print(model.weights)
     # save model dict
-    # model_save_path = PROJECT_ROOT / "custom_pd_embedding/model/pdvit"
-    # torch.save(
-    #     model.state_dict(), model_save_path / f"pdvit_{args.trace_steps}_{time_now}.pth"
-    # )
+    model_save_path = PROJECT_ROOT / "custom_pd_embedding/model/pdvit"
+    torch.save(
+        model.state_dict(),
+        model_save_path / f"pdvit_{args.weightVit_trace_steps}_{time_now}.pth",
+    )
 
 
 if __name__ == "__main__":
@@ -235,9 +238,15 @@ if __name__ == "__main__":
     )
     steps_train_label_array = np.empty((y_train.shape[0], args.weightVit_trace_steps))
     for i in range(X_train.shape[0]):
-        indices = np.random.choice(
-            X_train.shape[0], size=args.weightVit_trace_steps, replace=False
+        # contain itself
+        indices = [i]
+        # random choose weightVit_trace_steps - 1 samples
+        remaining_indices = np.random.choice(
+            np.delete(np.arange(X_train.shape[0]), i),
+            size=args.weightVit_trace_steps - 1,
+            replace=False,
         )
+        indices = np.concatenate(([i], remaining_indices))
 
         steps_train_content_array[i] = content_array[indices, 0, :]
         steps_train_label_array[i] = label_array[indices]

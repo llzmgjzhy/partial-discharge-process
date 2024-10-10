@@ -148,6 +148,7 @@ class weightVit(nn.Module):
         return final_pre
 
     def inference(self, x):
+        b, n, _ = x.shape
         x_mlp = x[:, :, :403]
         x_mlp = x_mlp.squeeze(1)
         x_resnet = x[:, :, 403:10403]
@@ -159,7 +160,31 @@ class weightVit(nn.Module):
             resnet_pre = self.resnet18(x_resnet)
             vit_pre = self.vit_classifier(x_vit)
 
-        w1, w2, w3 = torch.chunk(self.weights, 3, dim=1)
+        weightVit_input = torch.cat([mlp_pre, resnet_pre, vit_pre], dim=1)
+        weightVit_input = repeat(weightVit_input, "b c -> b t c", t=self.trace_steps)
+        pseudo_label = torch.zeros(b, self.trace_steps, self.num_classes, device=device)
+        weightVit_input = torch.cat([weightVit_input, pseudo_label], dim=2)
+        # backbone inference
+        weightVit_input = self.to_patch_embedding(weightVit_input)
+        b, n, _ = weightVit_input.shape
+
+        weight_tokens = repeat(self.weight_token, "1 1 d -> b 1 d", b=b)
+        weightVit_input = torch.cat((weight_tokens, weightVit_input), dim=1)
+        weightVit_input = self.dropout(weightVit_input)
+
+        weightVit_input = self.transformer(weightVit_input)
+
+        weightVit_input = (
+            weightVit_input.mean(dim=1)
+            if self.pool == "mean"
+            else weightVit_input[:, 0]
+        )
+
+        # get weights and allocate to the classifiers
+        weightVit_input = self.to_latent(weightVit_input)
+        # weights = torch.softmax(self.mlp_head(weightVit_input), dim=-1)
+        weights = self.mlp_head(weightVit_input)
+        w1, w2, w3 = torch.chunk(weights, 3, dim=1)
         final_pre = w1 * mlp_pre + w2 * resnet_pre + w3 * vit_pre
 
         return final_pre
