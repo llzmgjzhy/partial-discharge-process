@@ -175,12 +175,12 @@ def train(args, model, trainLoader, testLoader):
             epoch_val_loss = 0
             for data, label in testLoader:
                 data = data.to(device)
-                label_first = label[:, :1].squeeze().to(device)
+                label = label.to(device)
 
-                val_output = model(data, label)
-                val_loss = criterion(val_output, label_first)
+                val_output = model.inference(data)
+                val_loss = criterion(val_output, label)
 
-                acc = (val_output.argmax(dim=1) == label_first).float().mean()
+                acc = (val_output.argmax(dim=1) == label).float().mean()
                 epoch_val_accuracy += acc / len(testLoader)
                 epoch_val_loss += val_loss / len(testLoader)
 
@@ -218,35 +218,42 @@ if __name__ == "__main__":
             "To speed up data processing,please save the data in advance"
         )
 
-    # set random seed for reproducibility
-    np.random.seed(args.random_seed)
-    # process data for trace_steps
-    steps_content_array = np.empty(
-        (content_array.shape[0], args.weightVit_trace_steps, content_array.shape[2])
-    )
-    steps_label_array = np.empty((content_array.shape[0], args.weightVit_trace_steps))
-    for i in range(content_array.shape[0]):
-        indices = np.random.choice(
-            content_array.shape[0], size=args.weightVit_trace_steps, replace=False
-        )
-
-        steps_content_array[i] = content_array[indices, 0, :]
-        steps_label_array[i] = label_array[indices]
-
     # making dataset
     X_train, X_test, y_train, y_test = train_test_split(
-        steps_content_array.astype(np.float32),
-        steps_label_array.astype(np.int64),
+        content_array,
+        label_array,
         train_size=0.75,
         random_state=args.random_seed,
         stratify=label_array,
     )
 
-    trainDataset = AItrainDataset(X_train, y_train)
+    # set random seed for reproducibility
+    np.random.seed(args.random_seed)
+    # process data for trace_steps
+    steps_train_content_array = np.empty(
+        (X_train.shape[0], args.weightVit_trace_steps, X_train.shape[2])
+    )
+    steps_train_label_array = np.empty((y_train.shape[0], args.weightVit_trace_steps))
+    for i in range(X_train.shape[0]):
+        indices = np.random.choice(
+            X_train.shape[0], size=args.weightVit_trace_steps, replace=False
+        )
+
+        steps_train_content_array[i] = content_array[indices, 0, :]
+        steps_train_label_array[i] = label_array[indices]
+
+    trainDataset = AItrainDataset(
+        steps_train_content_array.astype(np.float32),
+        steps_train_label_array.astype(np.int64),
+    )
     testDataset = AItrainDataset(X_test, y_test)
 
-    trainLoader = DataLoader(trainDataset, batch_size=args.batch_size, shuffle=True)
-    testLoader = DataLoader(testDataset, batch_size=args.batch_size, shuffle=False)
+    trainLoader = DataLoader(
+        trainDataset, batch_size=args.batch_size, shuffle=True, drop_last=True
+    )
+    testLoader = DataLoader(
+        testDataset, batch_size=args.batch_size, shuffle=False, drop_last=True
+    )
 
     # model
     # 📌:the model config mainly depend on num_classes and dim,depth,heads and mlp_dim

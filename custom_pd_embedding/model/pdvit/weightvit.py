@@ -37,6 +37,7 @@ class weightVit(nn.Module):
         super().__init__()
         self.trace_steps = trace_steps
         self.num_classes = num_classes
+        self.weights = []
         # vit pipeline config
         # classifier num + one label
         patch_dim = (num_classifiers + 1) * num_classes
@@ -140,7 +141,25 @@ class weightVit(nn.Module):
         weightVit_input = self.to_latent(weightVit_input)
         # weights = torch.softmax(self.mlp_head(weightVit_input), dim=-1)
         weights = self.mlp_head(weightVit_input)
+        self.weights = weights
         w1, w2, w3 = torch.chunk(weights, 3, dim=1)
         final_pre = w1 * mlp_pre[0] + w2 * resnet_pre[0] + w3 * vit_pre[0]
+
+        return final_pre
+
+    def inference(self, x):
+        x_mlp = x[:, :, :403]
+        x_mlp = x_mlp.squeeze(1)
+        x_resnet = x[:, :, 403:10403]
+        x_resnet = x_resnet.reshape(x_resnet.shape[0], x_resnet.shape[1], 100, 100)
+        x_vit = x[:, :, 10403:]
+
+        with torch.no_grad():
+            mlp_pre = self.mlp(x_mlp)
+            resnet_pre = self.resnet18(x_resnet)
+            vit_pre = self.vit_classifier(x_vit)
+
+        w1, w2, w3 = torch.chunk(self.weights, 3, dim=1)
+        final_pre = w1 * mlp_pre + w2 * resnet_pre + w3 * vit_pre
 
         return final_pre
