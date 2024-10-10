@@ -113,12 +113,12 @@ class weightVit(nn.Module):
         weightVit_input = torch.cat([mlp_pre, resnet_pre, vit_pre], dim=2)
         weightVit_input = torch.transpose(weightVit_input, 0, 1)
         # one hot code for label
-        # mask
-        label[:, 0] = 0
         # one hot coding
         label_one_hot_arr = torch.nn.functional.one_hot(
             label.long(), num_classes=self.num_classes
         ).to(device)
+        # mask
+        label_one_hot_arr[:, 0, :] = 0
         weightVit_input = torch.cat([weightVit_input, label_one_hot_arr], dim=2)
 
         # backbone inference
