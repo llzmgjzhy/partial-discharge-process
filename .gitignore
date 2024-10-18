@@ -22,3 +22,6 @@ custom_pd_embedding/test/**/*.json
 
 # figs
 figs/
+
+# jupyter book
+*.ipynb
