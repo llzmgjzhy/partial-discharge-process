@@ -32,7 +32,42 @@ def getArgparse():
         default=PROJECT_ROOT / "data/vsb-power-line-fault-detection/metadata_train.csv",
         help="The path to the data file",
     )
+    parser.add_argument(
+        "--save-path",
+        type=str,
+        default="three-phases",
+        help="The path to the data file",
+    )
+    parser.add_argument(
+        "--phase-num",
+        type=int,
+        default=3,
+        help="The phase num for each signal",
+    )
     return parser.parse_args()
+
+
+def get_phase_data(df, meta_data, args):
+    num_cols = df.shape[1]
+    for i in range(0, num_cols, args.phase_num):
+        for j in range(args.phase_num):
+            if i + j < num_cols:
+                plt.plot(
+                    df.iloc[:, i + j],
+                    label=f"phase {i + j}",
+                    color=plt.cm.tab10(j),
+                )
+        plt.legend()
+        plt.title(f"Signals {i} to {i+args.phase_num-1}")
+        plt.title(f"Signals {i} to {i + args.phase_num-1}")
+        label_path = "fault" if meta_data["target"][i] == 1 else "normal"
+        plt.savefig(
+            PROJECT_ROOT
+            / "figs/vsb-power-line-origin"
+            / f"{args.save_path}/train"
+            / f"{label_path}/signals_{i}_to_{i + args.phase_num-1}.png"
+        )
+        plt.clf()
 
 
 if __name__ == "__main__":
@@ -47,25 +82,4 @@ if __name__ == "__main__":
     ).to_pandas()
 
     # data
-    num_cols = df_train.shape[1]
-    for i in range(0, num_cols, 3):
-        for j in range(3):
-            if i + j < num_cols:
-                plt.plot(
-                    df_train.iloc[:, i + j],
-                    label=f"phase {i + j}",
-                    color=plt.cm.tab10(j),
-                )
-        plt.legend()
-        plt.title(f"Signals {i} to {i+2}")
-        if meta_data_train["target"][i] == 1:
-            plt.savefig(
-                PROJECT_ROOT
-                / f"figs/vsb-power-line-origin/train/fault/signals_{i}_to_{i+2}.png"
-            )
-        else:
-            plt.savefig(
-                PROJECT_ROOT
-                / f"figs/vsb-power-line-origin/train/normal/signals_{i}_to_{i+2}.png"
-            )
-        plt.clf()
+    get_phase_data(df_train, meta_data_train, args)
