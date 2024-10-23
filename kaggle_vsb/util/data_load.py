@@ -9,17 +9,13 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 import sys
-import pyarrow.parquet as pq
-import matplotlib.pyplot as plt
 
 # make sure the path of import adequate
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def getArgparse():
-    parser = ArgumentParser(
-        description="Train vit using ai train data by extract manmade and network features"
-    )
+    parser = ArgumentParser(description="load vsb data")
     parser.add_argument(
         "--path",
         type=str,
